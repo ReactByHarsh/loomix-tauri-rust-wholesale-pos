@@ -8,12 +8,7 @@ export interface ReceiptData {
     logo?: string;
     transactionId: string | number;
     date: string;
-    items: {
-        name: string;
-        quantity: number;
-        price: number;
-        total: number;
-    }[];
+    items: { name: string; quantity: number; price: number; total: number; }[];
     subtotal: number;
     tax: number;
     taxRate: number;
@@ -38,7 +33,7 @@ const escapeHtml = (value: string) =>
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
 
-const paperWidth = (paperSize: ReceiptPaperSize) => (paperSize === '4-inch' ? '4in' : '3in');
+const paperWidth = (paperSize: ReceiptPaperSize) => (paperSize === '4-inch' ? '80mm' : '58mm');
 
 export const generateReceiptHTML = (
     data: ReceiptData,
@@ -51,295 +46,204 @@ export const generateReceiptHTML = (
         ? ''
         : 'window.addEventListener("load", () => { window.print(); window.onafterprint = () => window.close(); });';
 
-    return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Receipt</title>
-        <style>
-            @page { margin: 0; size: ${width} auto; }
-            * { box-sizing: border-box; }
-            body {
-                margin: 0;
-                padding: 0;
-                font-family: "Segoe UI", Arial, sans-serif;
-                background: #eef2f7;
-                color: #111827;
-            }
-            .page {
-                width: ${width};
-                margin: 0 auto;
-                padding: 10px;
-            }
-            .receipt {
-                background: #ffffff;
-                border: 1px solid #d8dee8;
-                border-radius: 14px;
-                overflow: hidden;
-                box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
-            }
-            .header {
-                padding: 14px 14px 10px;
-                text-align: center;
-                background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-                border-bottom: 1px dashed #cbd5e1;
-            }
-            .logo {
-                max-width: 72px;
-                max-height: 48px;
-                object-fit: contain;
-                margin-bottom: 8px;
-            }
-            .store-name {
-                margin: 0;
-                font-size: 18px;
-                font-weight: 800;
-                letter-spacing: 0.04em;
-                text-transform: uppercase;
-            }
-            .store-line,
-            .meta-line,
-            .footer-copy {
-                margin: 3px 0 0;
-                font-size: 11px;
-                color: #475569;
-            }
-            .section {
-                padding: 10px 14px;
-            }
-            .meta-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-                font-size: 11px;
-                color: #334155;
-            }
-            .meta-card {
-                padding: 8px;
-                border: 1px solid #e2e8f0;
-                border-radius: 10px;
-                background: #f8fafc;
-            }
-            .meta-label {
-                display: block;
-                font-size: 9px;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                color: #64748b;
-                margin-bottom: 3px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th {
-                font-size: 10px;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-                color: #64748b;
-                padding: 0 0 6px;
-                border-bottom: 1px dashed #cbd5e1;
-            }
-            td {
-                padding: 7px 0;
-                font-size: 12px;
-                border-bottom: 1px solid #f1f5f9;
-                vertical-align: top;
-            }
-            th:first-child,
-            td:first-child {
-                text-align: left;
-            }
-            th:nth-child(2),
-            td:nth-child(2) {
-                text-align: center;
-                width: 42px;
-            }
-            th:nth-child(3),
-            th:nth-child(4),
-            td:nth-child(3),
-            td:nth-child(4) {
-                text-align: right;
-                width: 68px;
-            }
-            .item-name {
-                font-weight: 600;
-                color: #0f172a;
-                line-height: 1.3;
-            }
-            .totals {
-                display: grid;
-                gap: 6px;
-                padding-top: 8px;
-            }
-            .total-row {
-                display: flex;
-                justify-content: space-between;
-                gap: 8px;
-                font-size: 12px;
-                color: #334155;
-            }
-            .grand-total {
-                margin-top: 4px;
-                padding: 10px 12px;
-                border-radius: 12px;
-                background: #0f172a;
-                color: white;
-                font-size: 15px;
-                font-weight: 800;
-            }
-            .payment-pill {
-                margin-top: 10px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 6px 12px;
-                border-radius: 999px;
-                background: #e2e8f0;
-                color: #0f172a;
-                font-size: 11px;
-                font-weight: 700;
-            }
-            .footer {
-                padding: 0 14px 14px;
-                text-align: center;
-            }
-            @media print {
-                body {
-                    background: white;
-                }
-                .page {
-                    width: ${width};
-                    padding: 0;
-                }
-                .receipt {
-                    border: none;
-                    border-radius: 0;
-                    box-shadow: none;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="page">
-            <div class="receipt">
-                <div class="header">
-                    ${data.logo ? `<img src="${data.logo}" class="logo" alt="Store logo" />` : ''}
-                    <h1 class="store-name">${escapeHtml(data.storeName)}</h1>
-                    ${data.storeAddress ? `<p class="store-line">${escapeHtml(data.storeAddress)}</p>` : ''}
-                    ${data.storePhone ? `<p class="store-line">Phone: ${escapeHtml(data.storePhone)}</p>` : ''}
+    const itemsHtml = data.items.map(item => `
+        <tr>
+            <td class="item-name">${escapeHtml(item.name)}</td>
+            <td class="qty">${item.quantity}</td>
+            <td class="rate">${item.price.toFixed(2)}</td>
+            <td class="total">${item.total.toFixed(2)}</td>
+        </tr>
+    `).join('');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt</title>
+    <style>
+        @page { margin: 0; size: ${width} auto; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Courier New", "Consolas", monospace;
+            background: #f5f5f5;
+            color: #000;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .page {
+            width: ${width};
+            margin: 0 auto;
+            padding: 8px;
+        }
+        .receipt {
+            background: #fff;
+            padding: 8px;
+        }
+        .center { text-align: center; }
+        .header {
+            border-bottom: 1px dashed #000;
+            padding-bottom: 6px;
+            margin-bottom: 6px;
+        }
+        .store-name {
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .store-info {
+            font-size: 10px;
+            color: #333;
+            margin-top: 2px;
+        }
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed #000;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+        thead th {
+            text-align: left;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        thead th.qty, thead th.rate, thead th.total {
+            text-align: right;
+        }
+        tbody td {
+            padding: 3px 0;
+            vertical-align: top;
+        }
+        td.qty, td.rate, td.total {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .item-name {
+            max-width: ${width === '58mm' ? '28mm' : '40mm'};
+            word-wrap: break-word;
+        }
+        .totals {
+            border-top: 1px dashed #000;
+            padding-top: 6px;
+            font-size: 11px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+        .grand-total {
+            font-size: 13px;
+            font-weight: bold;
+            border-top: 1px solid #000;
+            padding-top: 4px;
+            margin-top: 4px;
+        }
+        .payment {
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 6px 0;
+            padding: 3px 0;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+        }
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            margin-top: 6px;
+            padding-top: 4px;
+            border-top: 1px dashed #000;
+        }
+        @media print {
+            body { background: white; }
+            .page { width: ${width}; padding: 0; }
+            .receipt { padding: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="receipt">
+            <div class="header center">
+                <div class="store-name">${escapeHtml(data.storeName)}</div>
+                ${data.storeAddress ? `<div class="store-info">${escapeHtml(data.storeAddress)}</div>` : ''}
+                ${data.storePhone ? `<div class="store-info">Ph: ${escapeHtml(data.storePhone)}</div>` : ''}
+            </div>
+
+            <div class="meta">
+                <span>Bill: #${escapeHtml(String(data.transactionId))}</span>
+                <span>${escapeHtml(data.paymentMethod)}</span>
+            </div>
+            <div class="meta">
+                <span>${escapeHtml(data.date)}</span>
+                <span>${escapeHtml(data.customerName || 'Walk-in')}</span>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th class="qty">Qty</th>
+                        <th class="rate">Rate</th>
+                        <th class="total">Amt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+
+            <div class="totals">
+                <div class="total-row">
+                    <span>Subtotal</span>
+                    <span>${data.subtotal.toFixed(2)}</span>
                 </div>
-
-                <div class="section">
-                    <div class="meta-grid">
-                        <div class="meta-card">
-                            <span class="meta-label">Receipt</span>
-                            <strong>#${escapeHtml(String(data.transactionId))}</strong>
-                        </div>
-                        <div class="meta-card">
-                            <span class="meta-label">Payment</span>
-                            <strong>${escapeHtml(data.paymentMethod)}</strong>
-                        </div>
-                        <div class="meta-card">
-                            <span class="meta-label">Date</span>
-                            <span>${escapeHtml(data.date)}</span>
-                        </div>
-                        <div class="meta-card">
-                            <span class="meta-label">Customer</span>
-                            <span>${escapeHtml(data.customerName || 'Walk-in')}</span>
-                        </div>
-                    </div>
+                ${data.tax > 0 ? `
+                <div class="total-row">
+                    <span>Tax (${data.taxRate}%)</span>
+                    <span>${data.tax.toFixed(2)}</span>
                 </div>
-
-                <div class="section">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Qty</th>
-                                <th>Rate</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data.items
-                                .map(
-                                    (item) => `
-                                <tr>
-                                    <td><div class="item-name">${escapeHtml(item.name)}</div></td>
-                                    <td>${item.quantity}</td>
-                                    <td>Rs. ${item.price.toFixed(2)}</td>
-                                    <td>Rs. ${item.total.toFixed(2)}</td>
-                                </tr>
-                            `
-                                )
-                                .join('')}
-                        </tbody>
-                    </table>
-
-                    <div class="totals">
-                        <div class="total-row">
-                            <span>Subtotal</span>
-                            <span>Rs. ${data.subtotal.toFixed(2)}</span>
-                        </div>
-                        ${
-                            data.tax > 0
-                                ? `
-                        <div class="total-row">
-                            <span>Tax (${data.taxRate}%)</span>
-                            <span>Rs. ${data.tax.toFixed(2)}</span>
-                        </div>
-                        `
-                                : ''
-                        }
-                        ${
-                            extraDiscount > 0
-                                ? `
-                        <div class="total-row">
-                            <span>Gross total</span>
-                            <span>Rs. ${grossTotal.toFixed(2)}</span>
-                        </div>
-                        <div class="total-row">
-                            <span>Discount</span>
-                            <span>- Rs. ${extraDiscount.toFixed(2)}</span>
-                        </div>
-                        `
-                                : ''
-                        }
-                        <div class="total-row grand-total">
-                            <span>Net total</span>
-                            <span>Rs. ${data.total.toFixed(2)}</span>
-                        </div>
-                    </div>
-
-                    <div class="payment-pill">Paid via ${escapeHtml(data.paymentMethod)}</div>
+                ` : ''}
+                ${extraDiscount > 0 ? `
+                <div class="total-row">
+                    <span>Discount</span>
+                    <span>-${extraDiscount.toFixed(2)}</span>
                 </div>
-
-                <div class="footer">
-                    <p class="footer-copy">${escapeHtml(data.footerMessage || 'Thank you for shopping with us.')}</p>
-                    ${
-                        data.customerPhone
-                            ? `<p class="footer-copy">Customer Phone: ${escapeHtml(data.customerPhone)}</p>`
-                            : ''
-                    }
+                ` : ''}
+                <div class="total-row grand-total">
+                    <span>TOTAL</span>
+                    <span>${data.total.toFixed(2)}</span>
                 </div>
             </div>
+
+            <div class="payment">Paid via ${escapeHtml(data.paymentMethod)}</div>
+
+            <div class="footer">
+                <div>${escapeHtml(data.footerMessage || 'Thank you!')}</div>
+                ${data.customerPhone ? `<div>Customer: ${escapeHtml(data.customerPhone)}</div>` : ''}
+            </div>
         </div>
-        <script>${printScript}</script>
-    </body>
-    </html>
-    `;
+    </div>
+    <script>${printScript}</script>
+</body>
+</html>`;
 };
 
 const openPreviewWindow = (html: string) => {
-    const printWindow = window.open('', '_blank', 'width=480,height=760');
-    if (!printWindow) {
-        alert('Popup blocked. Please allow popups to preview the bill.');
-        return false;
-    }
-
+    const printWindow = window.open('', '_blank', 'width=420,height=680');
+    if (!printWindow) { alert('Popup blocked. Please allow popups to preview the bill.'); return false; }
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
@@ -358,18 +262,11 @@ export const printReceipt = async (
     if (window.api?.printReceipt) {
         try {
             // @ts-ignore
-            const result = await window.api.printReceipt(data, options.printerName, {
-                paperSize,
-                preview,
-            });
-            if (!result?.success && preview) {
-                openPreviewWindow(html);
-            }
+            const result = await window.api.printReceipt(data, options.printerName, { paperSize, preview });
+            if (!result?.success && preview) { openPreviewWindow(html); }
             return result;
         } catch (error) {
-            if (preview) {
-                openPreviewWindow(html);
-            }
+            if (preview) { openPreviewWindow(html); }
             return { success: false, error };
         }
     }

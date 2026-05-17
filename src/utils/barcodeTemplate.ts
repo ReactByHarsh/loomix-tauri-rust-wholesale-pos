@@ -18,12 +18,10 @@ export const generateBarcodeLabelHTML = (data: BarcodeLabelData) => {
     const copies = Math.max(1, Math.floor(data.quantity || 1));
     const labels = Array.from({ length: copies }, (_, index) => `
         <section class="label ${index < copies - 1 ? 'page-break' : ''}">
-            <div class="store-name">${escapeHtml(data.storeName || 'Store')}</div>
+            <div class="name">${escapeHtml(data.storeName || 'Store')}</div>
             <div class="barcode">${data.svgMarkup}</div>
-            <div class="meta-row">
-                <span class="meta-pill">Price: Rs. ${data.price.toFixed(2)}</span>
-                <span class="meta-pill">Qty: ${copies}</span>
-            </div>
+            <div class="code">${escapeHtml(data.barcodeValue)}</div>
+            <div class="price">Rs. ${data.price.toFixed(2)}</div>
         </section>
     `).join('');
 
@@ -35,35 +33,38 @@ export const generateBarcodeLabelHTML = (data: BarcodeLabelData) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Barcode Labels</title>
         <style>
-            @page { size: 58mm 34mm; margin: 0; }
-            * { box-sizing: border-box; }
+            @page { size: 50mm 25mm; margin: 0; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
             body {
                 margin: 0;
-                font-family: "Segoe UI", Arial, sans-serif;
+                font-family: "Courier New", monospace;
                 background: white;
                 color: black;
             }
             .label {
-                width: 58mm;
-                min-height: 34mm;
-                padding: 2.5mm 2.5mm 1.5mm;
+                width: 50mm;
+                height: 25mm;
+                padding: 1.5mm 2mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
                 text-align: center;
-                gap: 1.5mm;
+                gap: 0.5mm;
             }
             .page-break {
                 page-break-after: always;
             }
-            .store-name {
-                width: 100%;
-                font-size: 11px;
-                font-weight: 800;
-                line-height: 1.2;
+            .name {
+                font-size: 8px;
+                font-weight: bold;
                 text-transform: uppercase;
-                letter-spacing: 0.06em;
+                letter-spacing: 0.3px;
+                line-height: 1.2;
+                max-width: 46mm;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
             .barcode {
                 width: 100%;
@@ -73,21 +74,16 @@ export const generateBarcodeLabelHTML = (data: BarcodeLabelData) => {
             }
             .barcode svg {
                 width: 100%;
-                max-height: 15mm;
+                max-height: 10mm;
             }
-            .meta-row {
-                width: 100%;
-                display: flex;
-                justify-content: space-between;
-                gap: 2mm;
+            .code {
+                font-size: 9px;
+                font-weight: bold;
+                letter-spacing: 0.5px;
+            }
+            .price {
                 font-size: 10px;
-                font-weight: 700;
-            }
-            .meta-pill {
-                flex: 1;
-                border: 1px solid #000;
-                border-radius: 999px;
-                padding: 1mm 1.5mm;
+                font-weight: bold;
             }
         </style>
     </head>
