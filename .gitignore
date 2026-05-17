@@ -3,7 +3,11 @@ node_modules/
 
 # Build outputs
 dist/
+dist-electron/
 dist-ssr/
+
+# Legacy Electron artifacts
+electron-builder.yml
 build/*.zip
 build/*.exe
 build/*.msi
@@ -62,6 +66,7 @@ Thumbs.db
 src-tauri/target/
 src-tauri/**/target/
 src-tauri/.cargo/
+src-tauri/gen/schemas
 
 # Optional generated binaries
 *.exe
@@ -69,3 +74,6 @@ src-tauri/.cargo/
 *.dll
 *.so
 *.dylib
+
+# Kilo config
+.kilo/
