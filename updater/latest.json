@@ -1,11 +1,11 @@
 {
-  "version": "0.1.0",
-  "notes": "Initial release v0.1.0",
-  "pub_date": "2026-05-18T09:50:10.800Z",
+  "version": "0.2.0",
+  "notes": "Update to version 0.2.0",
+  "pub_date": "2026-05-18T15:16:34.281Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUQ2g3NmFWbVJEeDFmNjhMMklsbTN2cVBoQ3BZWXBxYlVjTExTTjdXSmN2d3FZRVRzL01lejZpVEd6bmJhbk5UVWVSQ2l0NjMwc3kvN3hHR2lnL3Z3bnNTWndxZ3dnMHc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MDk3NTQ4CWZpbGU6bG9vbWl4XzAuMS4wX3g2NC1zZXR1cC5leGUKYUVuQUc4NWNTZHRZN25vbDhLb0p2NDlxcSt6UElyUXllT2dkdDZpWHVhQ2p2Wi92Zjc3bzFSZFBBZFE3YVNnaHZiR252dnk4UDh1NzQ2MmFSbUgrQ2c9PQo=",
-      "url": "https://pub-01cd1bbe8d8646d18ad3568dd4b68027.r2.dev/releases/0.1.0/nsis/loomix_0.1.0_x64-setup.exe"
+      "url": "https://pub-01cd1bbe8d8646d18ad3568dd4b68027.r2.dev/releases/0.2.0/nsis/loomix_0.1.0_x64-setup.exe"
     }
   }
 }
