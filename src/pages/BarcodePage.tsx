@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Barcode, Check, Copy, Download, Info, Printer, RefreshCw, Store, Tag } from 'lucide-react';
+import { Barcode, Check, Copy, Download, Printer, RefreshCw, Store, Tag } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { generateBarcodeLabelHTML } from '../utils/barcodeTemplate';

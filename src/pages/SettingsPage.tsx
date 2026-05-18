@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-    AlertTriangle, Check, Monitor, Moon, Palette, Printer, Save, Scan, Settings, Sparkles, Store, Sun, TestTube, Trash2,
+    AlertTriangle, Check, Monitor, Moon, Palette, Printer, Save, Settings, Sparkles, Store, Sun, TestTube, Trash2,
 } from 'lucide-react';
 import { useSettingsStore, type ReceiptPaperSize } from '../store/useSettingsStore';
 import { generateReceiptHTML, printReceipt } from '../utils/receiptTemplate';

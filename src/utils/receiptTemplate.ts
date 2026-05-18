@@ -40,7 +40,6 @@ export const generateReceiptHTML = (
     options: ReceiptPrintOptions = {}
 ) => {
     const width = paperWidth(options.paperSize ?? '3-inch');
-    const grossTotal = data.subtotal + data.tax;
     const extraDiscount = data.extraDiscount ?? 0;
     const printScript = options.preview
         ? ''

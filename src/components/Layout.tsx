@@ -2,9 +2,12 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { Barcode, History, LayoutDashboard, Package, Settings, ShoppingCart, Truck } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { UpdateBanner } from './UpdateBanner';
+import { useAppUpdater } from '../hooks/useAppUpdater';
 
 export function Layout() {
     const { storeName, profileImage } = useSettingsStore();
+    const updater = useAppUpdater();
     const initial = storeName.charAt(0) || 'L';
 
     const navItems = [
@@ -92,8 +95,11 @@ export function Layout() {
 
             {/* Main Content */}
             <main className="relative flex-1 overflow-hidden">
-                <div className="relative h-full overflow-y-auto">
-                    <Outlet />
+                <div className="relative flex h-full flex-col overflow-hidden">
+                    <UpdateBanner updater={updater} />
+                    <div className="relative flex-1 overflow-y-auto">
+                        <Outlet />
+                    </div>
                 </div>
             </main>
         </div>

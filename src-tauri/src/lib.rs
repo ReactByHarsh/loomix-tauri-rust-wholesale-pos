@@ -160,6 +160,7 @@ async fn retry_license_check(manager: State<'_, LicenseManager>) -> Result<serde
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_process::init())
     .setup(|app| {
         let db = Database::new(app.handle());
         db.init().expect("Failed to init DB");
@@ -168,6 +169,10 @@ pub fn run() {
         let license_manager = LicenseManager::new(app.handle());
         // license_manager.check_license(); // Removed sync check to avoid async runtime issues during setup
         app.manage(license_manager);
+
+        #[cfg(desktop)]
+        app.handle()
+            .plugin(tauri_plugin_updater::Builder::new().build())?;
         
         if cfg!(debug_assertions) {
             app.handle().plugin(
