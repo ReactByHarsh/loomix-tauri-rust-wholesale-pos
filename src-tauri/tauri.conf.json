@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "loomix",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.loomix.pos",
   "build": {
     "frontendDist": "../dist",
@@ -37,9 +37,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "REPLACE_WITH_YOUR_TAURI_UPDATER_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM3NDM2NDU2OUFCRTg3QzIKUldUQ2g3NmFWbVJEeHk0ZWtmTmk5RHZ3Z2VTVU9jUjlJZGo1VHZJVXNPUUpSUGxxTTgxdFhJNVoK",
       "endpoints": [
-        "https://updates.example.com/loomix/latest.json"
+        "https://pub-01cd1bbe8d8646d18ad3568dd4b68027.r2.dev/latest.json"
       ],
       "windows": {
         "installMode": "passive"

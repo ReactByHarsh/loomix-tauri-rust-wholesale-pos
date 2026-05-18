@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { BillingMode } from '../lib/pricing';
 
 export type CurrencyCode = 'INR' | 'USD' | 'EUR';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type ReceiptPaperSize = '3-inch' | '4-inch';
+export type AppLanguage = 'en' | 'hi' | 'mr' | 'bn' | 'gu';
 
 export interface SettingsState {
     storeName: string;
@@ -19,6 +21,9 @@ export interface SettingsState {
     storeAddress: string;
     storePhone: string;
     receiptFooter: string;
+    language: AppLanguage;
+    defaultBillingMode: BillingMode;
+    vendorsEnabled: boolean;
     setStoreName: (name: string) => void;
     setStoreAddress: (address: string) => void;
     setStorePhone: (phone: string) => void;
@@ -32,6 +37,9 @@ export interface SettingsState {
     setBarcodePrinter: (printer: string) => void;
     setBillPaperSize: (size: ReceiptPaperSize) => void;
     setProfileImage: (image: string | null) => void;
+    setLanguage: (language: AppLanguage) => void;
+    setDefaultBillingMode: (mode: BillingMode) => void;
+    setVendorsEnabled: (enabled: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -40,7 +48,7 @@ export const useSettingsStore = create<SettingsState>()(
             storeName: 'Loomix',
             storeAddress: '',
             storePhone: '',
-            receiptFooter: 'Thank you for your business!',
+            receiptFooter: 'Thank you for your business!\nPlease visit again!',
             taxRate: 8,
             taxEnabled: true,
             currency: 'INR',
@@ -50,6 +58,9 @@ export const useSettingsStore = create<SettingsState>()(
             barcodePrinter: '',
             billPaperSize: '3-inch',
             profileImage: null,
+            language: 'en',
+            defaultBillingMode: 'retail',
+            vendorsEnabled: true,
             setStoreName: (name) => set({ storeName: name }),
             setStoreAddress: (address) => set({ storeAddress: address }),
             setStorePhone: (phone) => set({ storePhone: phone }),
@@ -63,10 +74,13 @@ export const useSettingsStore = create<SettingsState>()(
             setBarcodePrinter: (printer) => set({ barcodePrinter: printer }),
             setBillPaperSize: (size) => set({ billPaperSize: size }),
             setProfileImage: (image) => set({ profileImage: image }),
+            setLanguage: (language) => set({ language }),
+            setDefaultBillingMode: (defaultBillingMode) => set({ defaultBillingMode }),
+            setVendorsEnabled: (vendorsEnabled) => set({ vendorsEnabled }),
         }),
         {
             name: 'loomix-settings',
-            version: 2,
+            version: 3,
             migrate: (persistedState: unknown) => {
                 const state = (persistedState as Partial<SettingsState> | undefined) ?? {};
                 const selectedPrinter = state.billPrinter ?? state.selectedPrinter ?? '';
@@ -76,6 +90,10 @@ export const useSettingsStore = create<SettingsState>()(
                     billPrinter: selectedPrinter,
                     barcodePrinter: state.barcodePrinter ?? '',
                     billPaperSize: state.billPaperSize ?? '3-inch',
+                    receiptFooter: state.receiptFooter ?? 'Thank you for your business!\nPlease visit again!',
+                    language: state.language ?? 'en',
+                    defaultBillingMode: state.defaultBillingMode ?? 'retail',
+                    vendorsEnabled: state.vendorsEnabled ?? true,
                 } as SettingsState;
             },
         }
@@ -85,12 +103,12 @@ export const useSettingsStore = create<SettingsState>()(
 export const getCurrencySymbol = (currency: CurrencyCode) => {
     switch (currency) {
         case 'INR':
-            return 'Rs.';
+            return '₹';
         case 'USD':
             return '$';
         case 'EUR':
             return 'EUR';
         default:
-            return 'Rs.';
+            return '₹';
     }
 };

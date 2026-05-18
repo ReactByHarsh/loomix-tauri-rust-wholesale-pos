@@ -77,3 +77,9 @@ src-tauri/gen/schemas
 
 # Kilo config
 .kilo/
+
+# Tauri updater signing keys (NEVER commit the private key)
+~/.tauri/loomix-updater.key
+~/.tauri/*.key
+*.key
+!*.key.pub

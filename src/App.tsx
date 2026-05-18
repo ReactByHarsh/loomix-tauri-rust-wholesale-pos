@@ -16,11 +16,12 @@ import { Layout } from './components/Layout';
 import { useSettingsStore } from './store/useSettingsStore';
 
 function App() {
-  const { theme } = useSettingsStore();
+  const { theme, vendorsEnabled, language } = useSettingsStore();
 
   // Apply theme on mount and when it changes
   useEffect(() => {
     const root = document.documentElement;
+    root.lang = language;
 
     if (theme === 'dark') {
       root.classList.add('dark');
@@ -46,7 +47,7 @@ function App() {
       mediaQuery.addEventListener('change', handler);
       return () => mediaQuery.removeEventListener('change', handler);
     }
-  }, [theme]);
+  }, [theme, language]);
 
   return (
     <Router>
@@ -56,7 +57,7 @@ function App() {
             <Route path="/" element={<Navigate to="/pos" replace />} />
             <Route path="/pos" element={<POSPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/vendors" element={<VendorsPage />} />
+            <Route path="/vendors" element={vendorsEnabled ? <VendorsPage /> : <Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/barcode" element={<BarcodePage />} />

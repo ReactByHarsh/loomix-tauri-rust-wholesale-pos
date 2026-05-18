@@ -16,6 +16,7 @@ export interface AppUpdaterState {
     contentLength: number | null;
     progressPercent: number;
     error: string | null;
+    lastCheckedAt: Date | null;
 }
 
 export interface AppUpdaterResult {
@@ -23,6 +24,7 @@ export interface AppUpdaterResult {
     installUpdate: () => Promise<void>;
     restartToApply: () => Promise<void>;
     dismissUpdate: () => Promise<void>;
+    checkForUpdates: () => Promise<void>;
 }
 
 const initialState: AppUpdaterState = {
@@ -35,6 +37,7 @@ const initialState: AppUpdaterState = {
     contentLength: null,
     progressPercent: 0,
     error: null,
+    lastCheckedAt: null,
 };
 
 function getErrorMessage(error: unknown) {
@@ -48,6 +51,7 @@ function getErrorMessage(error: unknown) {
 export function useAppUpdater(): AppUpdaterResult {
     const [state, setState] = useState<AppUpdaterState>(initialState);
     const activeUpdateRef = useRef<Update | null>(null);
+    const isCheckingRef = useRef(false);
 
     useEffect(() => {
         if (!isTauri()) {
@@ -65,10 +69,14 @@ export function useAppUpdater(): AppUpdaterResult {
             }
         };
 
-        const runSilentUpdateCheck = async () => {
+        const runUpdateCheck = async (silent = true) => {
+            if (isCheckingRef.current) return;
+            isCheckingRef.current = true;
+
             const currentVersion = await getVersion().catch(() => null);
 
-            if (cancelled) {
+            if (!silent && cancelled) {
+                isCheckingRef.current = false;
                 return;
             }
 
@@ -84,6 +92,7 @@ export function useAppUpdater(): AppUpdaterResult {
 
                 if (cancelled) {
                     await update?.close().catch(() => undefined);
+                    isCheckingRef.current = false;
                     return;
                 }
 
@@ -97,7 +106,9 @@ export function useAppUpdater(): AppUpdaterResult {
                         downloadedBytes: 0,
                         contentLength: null,
                         progressPercent: 0,
+                        lastCheckedAt: new Date(),
                     }));
+                    isCheckingRef.current = false;
                     return;
                 }
 
@@ -114,21 +125,25 @@ export function useAppUpdater(): AppUpdaterResult {
                     contentLength: null,
                     progressPercent: 0,
                     error: null,
+                    lastCheckedAt: new Date(),
                 }));
             } catch (error) {
-                console.warn('Silent updater check failed:', error);
+                console.warn('Updater check failed:', error);
 
                 if (!cancelled) {
                     setState((previous) => ({
                         ...previous,
                         status: 'idle',
                         error: getErrorMessage(error),
+                        lastCheckedAt: new Date(),
                     }));
                 }
+            } finally {
+                isCheckingRef.current = false;
             }
         };
 
-        void runSilentUpdateCheck();
+        void runUpdateCheck(true);
 
         return () => {
             cancelled = true;
@@ -227,10 +242,89 @@ export function useAppUpdater(): AppUpdaterResult {
         }));
     };
 
+    const checkForUpdates = async () => {
+        if (!isTauri()) return;
+        if (isCheckingRef.current) return;
+        if (state.status === 'downloading') return;
+
+        let cancelled = false;
+
+        const closeActiveUpdate = async () => {
+            const activeUpdate = activeUpdateRef.current;
+            activeUpdateRef.current = null;
+            if (activeUpdate) {
+                await activeUpdate.close().catch(() => undefined);
+            }
+        };
+
+        isCheckingRef.current = true;
+
+        const currentVersion = await getVersion().catch(() => null);
+
+        setState((previous) => ({
+            ...previous,
+            currentVersion,
+            status: 'checking',
+            error: null,
+        }));
+
+        try {
+            const update = await check();
+
+            if (cancelled) {
+                await update?.close().catch(() => undefined);
+                return;
+            }
+
+            if (!update) {
+                setState((previous) => ({
+                    ...previous,
+                    status: 'idle',
+                    availableVersion: null,
+                    notes: null,
+                    publishedAt: null,
+                    downloadedBytes: 0,
+                    contentLength: null,
+                    progressPercent: 0,
+                    lastCheckedAt: new Date(),
+                }));
+                return;
+            }
+
+            await closeActiveUpdate();
+            activeUpdateRef.current = update;
+
+            setState((previous) => ({
+                ...previous,
+                status: 'available',
+                availableVersion: update.version,
+                notes: update.body?.trim() || null,
+                publishedAt: update.date ?? null,
+                downloadedBytes: 0,
+                contentLength: null,
+                progressPercent: 0,
+                error: null,
+                lastCheckedAt: new Date(),
+            }));
+        } catch (error) {
+            console.warn('Manual updater check failed:', error);
+            setState((previous) => ({
+                ...previous,
+                status: 'idle',
+                error: getErrorMessage(error),
+                lastCheckedAt: new Date(),
+            }));
+        } finally {
+            isCheckingRef.current = false;
+        }
+
+    };
+
     return {
         state,
         installUpdate,
         restartToApply,
         dismissUpdate,
+        checkForUpdates,
     };
 }

@@ -3,9 +3,11 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { BarChart3, TrendingUp, AlertTriangle, ShoppingCart, Package, ArrowUpRight } from 'lucide-react';
 import type { DashboardData } from '../types';
 import { useSettingsStore, getCurrencySymbol } from '../store/useSettingsStore';
+import { useI18n } from '../i18n';
 
 export function DashboardPage() {
     const { currency } = useSettingsStore();
+    const { t } = useI18n();
     const currencySymbol = getCurrencySymbol(currency);
     const [data, setData] = useState<DashboardData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +31,7 @@ export function DashboardPage() {
             <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 p-5 flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-12 h-12 border-3 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-400 rounded-full mx-auto"></div>
-                    <p className="mt-3 text-zinc-500 dark:text-zinc-400 font-medium text-sm">Loading dashboard...</p>
+                    <p className="mt-3 text-zinc-500 dark:text-zinc-400 font-medium text-sm">{t('dashboard.loading')}</p>
                 </div>
             </div>
         );
@@ -40,7 +42,7 @@ export function DashboardPage() {
             <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 p-5 flex items-center justify-center">
                 <div className="text-center">
                     <BarChart3 size={40} className="mx-auto mb-3 text-zinc-400" />
-                    <p className="text-zinc-500 text-sm">Unable to load dashboard data</p>
+                    <p className="text-zinc-500 text-sm">{t('dashboard.unavailable')}</p>
                 </div>
             </div>
         );
@@ -59,16 +61,16 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <h1 className="text-xl font-bold tracking-tight text-zinc-800 dark:text-zinc-100">
-                                Dashboard
+                                {t('dashboard.title')}
                             </h1>
                             <p className="text-zinc-500 dark:text-zinc-400 text-xs">
-                                Business overview
+                                {t('dashboard.subtitle')}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">Live</span>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">{t('dashboard.live')}</span>
                     </div>
                 </div>
 
@@ -77,7 +79,7 @@ export function DashboardPage() {
                     {/* Sales Card (Today & Total) */}
                     <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Sales</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{t('dashboard.sales')}</span>
                             <TrendingUp size={16} className="text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">
@@ -86,16 +88,16 @@ export function DashboardPage() {
                         <div className="flex items-center justify-between mt-1">
                             <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                                 <ArrowUpRight size={12} />
-                                <span className="text-xs font-medium">Today</span>
+                                <span className="text-xs font-medium">{t('dashboard.today')}</span>
                             </div>
-                            <span className="text-xs text-zinc-400">Total: {currencySymbol}{(stats.total_sales || 0).toLocaleString('en-IN')}</span>
+                            <span className="text-xs text-zinc-400">{t('dashboard.total')}: {currencySymbol}{(stats.total_sales || 0).toLocaleString('en-IN')}</span>
                         </div>
                     </div>
 
                     {/* Total Transactions */}
                     <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Transactions</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{t('dashboard.transactions')}</span>
                             <ShoppingCart size={16} className="text-zinc-600 dark:text-zinc-400" />
                         </div>
                         <div className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">
@@ -103,7 +105,7 @@ export function DashboardPage() {
                         </div>
                         <div className="flex items-center gap-1 mt-1 text-zinc-500 dark:text-zinc-400">
                             <BarChart3 size={12} />
-                            <span className="text-xs font-medium">All time</span>
+                            <span className="text-xs font-medium">{t('dashboard.allTime')}</span>
                         </div>
                     </div>
 
@@ -113,7 +115,7 @@ export function DashboardPage() {
                         : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'
                         }`}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Low Stock</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{t('dashboard.lowStock')}</span>
                             <AlertTriangle size={16} className={stats.low_stock_items > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'} />
                         </div>
                         <div className={`text-2xl font-bold ${stats.low_stock_items > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-800 dark:text-zinc-100'}`}>
@@ -121,14 +123,14 @@ export function DashboardPage() {
                         </div>
                         <div className={`flex items-center gap-1 mt-1 ${stats.low_stock_items > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
                             <Package size={12} />
-                            <span className="text-xs font-medium">{stats.low_stock_items > 0 ? 'Need restock' : 'All stocked'}</span>
+                            <span className="text-xs font-medium">{stats.low_stock_items > 0 ? t('dashboard.needRestock') : t('dashboard.allStocked')}</span>
                         </div>
                     </div>
 
                     {/* Profit Card (Today & Total) */}
                     <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Profit</span>
+                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{t('dashboard.profit')}</span>
                             {/* Reusing DollarSign equivalent or generic Trend for Profit, using BarChart3 as placeholder if needed but lucide-react has many. Using TrendingUp with blue distinct color */}
                             <TrendingUp size={16} className="text-blue-600 dark:text-blue-400" />
                         </div>
@@ -138,9 +140,9 @@ export function DashboardPage() {
                         <div className="flex items-center justify-between mt-1">
                             <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                                 <ArrowUpRight size={12} />
-                                <span className="text-xs font-medium">Today</span>
+                                <span className="text-xs font-medium">{t('dashboard.today')}</span>
                             </div>
-                            <span className="text-xs text-zinc-400">Total: {currencySymbol}{(stats.total_profit || 0).toLocaleString('en-IN')}</span>
+                            <span className="text-xs text-zinc-400">{t('dashboard.total')}: {currencySymbol}{(stats.total_profit || 0).toLocaleString('en-IN')}</span>
                         </div>
                     </div>
                 </div>
@@ -149,12 +151,12 @@ export function DashboardPage() {
                 <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Sales Trend</h3>
-                            <p className="text-xs text-zinc-500 mt-0.5">Last 7 days</p>
+                            <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{t('dashboard.salesTrend')}</h3>
+                            <p className="text-xs text-zinc-500 mt-0.5">{t('dashboard.last7Days')}</p>
                         </div>
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-700 rounded-md">
                             <div className="w-2 h-2 rounded-full bg-zinc-500"></div>
-                            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Revenue</span>
+                            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{t('dashboard.revenue')}</span>
                         </div>
                     </div>
                     <div className="h-[240px] w-full">
@@ -191,7 +193,7 @@ export function DashboardPage() {
                                         fontSize: '12px'
                                     }}
                                     itemStyle={{ color: '#fff' }}
-                                    formatter={(value: number | undefined) => [`${currencySymbol}${(value || 0).toLocaleString('en-IN')}`, 'Revenue']}
+                                    formatter={(value: number | undefined) => [`${currencySymbol}${(value || 0).toLocaleString('en-IN')}`, t('dashboard.revenue')]}
                                     labelStyle={{ color: '#a1a1aa', marginBottom: '4px' }}
                                 />
                                 <Area
@@ -215,22 +217,22 @@ export function DashboardPage() {
                     <a href="#/pos" className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                         <ShoppingCart size={18} className="text-zinc-600 dark:text-zinc-400" />
                         <div>
-                            <p className="font-medium text-sm text-zinc-800 dark:text-zinc-100">POS Terminal</p>
-                            <p className="text-xs text-zinc-500">Start transaction</p>
+                            <p className="font-medium text-sm text-zinc-800 dark:text-zinc-100">{t('pos.title')}</p>
+                            <p className="text-xs text-zinc-500">{t('dashboard.startTransaction')}</p>
                         </div>
                     </a>
                     <a href="#/inventory" className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                         <Package size={18} className="text-zinc-600 dark:text-zinc-400" />
                         <div>
-                            <p className="font-medium text-sm text-zinc-800 dark:text-zinc-100">Inventory</p>
-                            <p className="text-xs text-zinc-500">Manage products</p>
+                            <p className="font-medium text-sm text-zinc-800 dark:text-zinc-100">{t('inventory.title')}</p>
+                            <p className="text-xs text-zinc-500">{t('dashboard.manageProducts')}</p>
                         </div>
                     </a>
                     <a href="#/history" className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                         <BarChart3 size={18} className="text-zinc-600 dark:text-zinc-400" />
                         <div>
-                            <p className="font-medium text-sm text-zinc-800 dark:text-zinc-100">History</p>
-                            <p className="text-xs text-zinc-500">View transactions</p>
+                            <p className="font-medium text-sm text-zinc-800 dark:text-zinc-100">{t('history.title')}</p>
+                            <p className="text-xs text-zinc-500">{t('dashboard.viewTransactions')}</p>
                         </div>
                     </a>
                 </div>

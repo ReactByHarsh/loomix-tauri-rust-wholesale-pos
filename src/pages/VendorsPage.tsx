@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Calendar, DollarSign, FileImage, Truck, Eye, CheckCircle, Clock, Receipt, UserPlus, Users, ChevronDown } from 'lucide-react';
 import { useSettingsStore, getCurrencySymbol } from '../store/useSettingsStore';
+import { useI18n } from '../i18n';
 
 function cn(...classes: (string | undefined | null | false)[]) {
     return classes.filter(Boolean).join(' ');
@@ -30,6 +31,7 @@ interface VendorRecord {
 
 export function VendorsPage() {
     const { currency } = useSettingsStore();
+    const { t } = useI18n();
     const currencySymbol = getCurrencySymbol(currency);
     const [profiles, setProfiles] = useState<VendorProfile[]>([]);
     const [selectedProfileId, setSelectedProfileId] = useState<number | 'all'>('all');
@@ -275,15 +277,15 @@ export function VendorsPage() {
     return (
         <div className="flex flex-col h-full bg-zinc-100 dark:bg-zinc-900">
             {/* Compact Header */}
-            <div className="shrink-0 p-4 bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+            <div className="sticky top-0 z-20 shrink-0 border-b border-zinc-200 bg-white/95 p-4 backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/95">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-700 rounded-lg">
                             <Truck size={18} className="text-zinc-700 dark:text-zinc-300" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">Vendor Management</h1>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">Track purchases & payments</p>
+                            <h1 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{t('vendors.title')}</h1>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('vendors.subtitle')}</p>
                         </div>
                     </div>
                 </div>
@@ -299,8 +301,8 @@ export function VendorsPage() {
                                 <Users size={16} className="text-zinc-500" />
                                 <span className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
                                     {selectedProfileId === 'all'
-                                        ? 'All Vendors (Summary)'
-                                        : profiles.find(p => p.id === selectedProfileId)?.name || 'Select Vendor'}
+                                        ? t('vendors.allSummary')
+                                        : profiles.find(p => p.id === selectedProfileId)?.name || t('vendors.selectVendor')}
                                 </span>
                             </div>
                             <ChevronDown size={16} className="text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" />
@@ -317,7 +319,7 @@ export function VendorsPage() {
                                             : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'
                                             }`}
                                     >
-                                        All Vendors (Summary)
+                                        {t('vendors.allSummary')}
                                     </button>
                                     {profiles.map(p => (
                                         <button
@@ -353,7 +355,7 @@ export function VendorsPage() {
                         }
                         setIsDialogOpen(true);
                     }} className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg font-medium text-xs">
-                        <Plus size={14} /> Add Transaction
+                        <Plus size={14} /> {t('vendors.addTransaction')}
                     </button>
                 </div>
 
@@ -361,28 +363,28 @@ export function VendorsPage() {
                 <div className="grid grid-cols-4 gap-2 mb-3">
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Records</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('vendors.records')}</span>
                             <Receipt size={12} className="text-zinc-400" />
                         </div>
                         <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{stats.vendor_count}</p>
                     </div>
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Total Purchase</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('vendors.totalPurchase')}</span>
                             <DollarSign size={12} className="text-zinc-400" />
                         </div>
                         <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{currencySymbol}{stats.total_purchase.toLocaleString('en-IN')}</p>
                     </div>
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Total Paid</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('vendors.totalPaid')}</span>
                             <CheckCircle size={12} className="text-emerald-500" />
                         </div>
                         <p className="text-lg font-bold text-emerald-600">{currencySymbol}{stats.total_paid.toLocaleString('en-IN')}</p>
                     </div>
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Pending</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('vendors.pending')}</span>
                             <Clock size={12} className={stats.total_pending > 0 ? "text-amber-500" : "text-zinc-400"} />
                         </div>
                         <p className={cn("text-lg font-bold", stats.total_pending > 0 ? "text-amber-600" : "text-zinc-800 dark:text-zinc-100")}>{currencySymbol}{stats.total_pending.toLocaleString('en-IN')}</p>
@@ -393,17 +395,17 @@ export function VendorsPage() {
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                        <input type="text" placeholder="Search by vendor name or notes..." value={search} onChange={e => setSearch(e.target.value)}
+                        <input type="text" placeholder={t('vendors.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)}
                             className="w-full pl-9 pr-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm" />
                     </div>
                     <div className="flex items-center gap-1.5">
                         <Calendar size={14} className="text-zinc-400" />
                         <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}
                             className="px-2 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm">
-                            <option value="all">All Time</option>
-                            <option value="today">Today</option>
-                            <option value="week">This Week</option>
-                            <option value="month">This Month</option>
+                            <option value="all">{t('vendors.allTime')}</option>
+                            <option value="today">{t('vendors.today')}</option>
+                            <option value="week">{t('vendors.week')}</option>
+                            <option value="month">{t('vendors.month')}</option>
                         </select>
                     </div>
                 </div>
@@ -501,18 +503,18 @@ export function VendorsPage() {
                                 <p className="text-xs text-zinc-500">{vendors.length} of {totalVendors} records</p>
                                 <div className="flex items-center gap-1.5">
                                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">Prev</button>
+                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">{t('common.prev')}</button>
                                     <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{currentPage}/{totalPages}</span>
                                     <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">Next</button>
+                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">{t('common.next')}</button>
                                 </div>
                             </div>
 
                             {vendors.length === 0 && (
                                 <div className="p-8 text-center">
                                     <Truck size={32} className="mx-auto mb-3 text-zinc-300 dark:text-zinc-600" />
-                                    <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">No vendor records found</h3>
-                                    <p className="text-zinc-500 text-xs">{totalVendors === 0 ? "Add your first vendor record." : "Try adjusting filters."}</p>
+                                    <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 mb-1">{t('vendors.noRecords')}</h3>
+                                    <p className="text-zinc-500 text-xs">{totalVendors === 0 ? t('vendors.addFirstRecord') : t('inventory.adjustFilters')}</p>
                                 </div>
                             )}
                         </>

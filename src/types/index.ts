@@ -1,8 +1,11 @@
+import type { BillingMode } from '../lib/pricing';
+
 export interface Product {
     id: number;
     sku: string;
     name: string;
     price: number;
+    wholesale_price?: number;
     stock: number;
     category: string;
     cost_price?: number;
@@ -11,6 +14,8 @@ export interface Product {
 
 export interface CartItem extends Product {
     quantity: number;
+    unit_price: number;
+    pricing_mode: BillingMode;
 }
 
 export interface TransactionItem {
@@ -21,6 +26,7 @@ export interface TransactionItem {
 export interface TransactionPayload {
     total_amount: number;
     payment_method: 'CASH' | 'UPI' | 'CARD';
+    billing_mode?: BillingMode;
     items: { product_id: number; quantity: number; price_at_sale: number }[];
 }
 

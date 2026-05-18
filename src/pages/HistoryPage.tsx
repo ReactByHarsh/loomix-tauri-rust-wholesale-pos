@@ -2,12 +2,14 @@ import { useEffect, useState, useMemo } from 'react';
 import { History, Printer, Eye, Download, Search, Calendar, CreditCard, Banknote, Receipt, X, FileText, TrendingUp, Package, Clock, QrCode } from 'lucide-react';
 import { useSettingsStore, getCurrencySymbol } from '../store/useSettingsStore';
 import { printReceipt as sendReceiptToPrinter } from '../utils/receiptTemplate';
+import { useI18n } from '../i18n';
 
 interface Transaction {
     id: number;
     total_amount: number;
     extra_discount?: number;
     payment_method: string;
+    billing_mode?: string;
     customer_name?: string;
     customer_phone?: string;
     created_at: string;
@@ -19,6 +21,7 @@ interface TransactionDetail extends Transaction {
 
 export function HistoryPage() {
     const { currency } = useSettingsStore();
+    const { t } = useI18n();
     const currencySymbol = getCurrencySymbol(currency);
 
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -94,7 +97,7 @@ export function HistoryPage() {
             storeName, storeAddress, storePhone, footerMessage: receiptFooter, logo: profileImage || undefined,
             transactionId: tx.id, date: new Date(tx.created_at).toLocaleString(),
             items: tx.items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price_at_sale, total: item.price_at_sale * item.quantity })),
-            subtotal, tax, taxRate, total: tx.total_amount, extraDiscount, paymentMethod: tx.payment_method, customerName: tx.customer_name, customerPhone: tx.customer_phone
+            subtotal, tax, taxRate, total: tx.total_amount, extraDiscount, paymentMethod: tx.payment_method, customerName: tx.customer_name, customerPhone: tx.customer_phone, currencySymbol
         };
         await sendReceiptToPrinter(receiptData, {
             printerName: billPrinter,
@@ -149,27 +152,27 @@ export function HistoryPage() {
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         const today = new Date(); const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-        if (date.toDateString() === today.toDateString()) return `Today, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-        else if (date.toDateString() === yesterday.toDateString()) return `Yesterday, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        if (date.toDateString() === today.toDateString()) return `${t('time.today')}, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        else if (date.toDateString() === yesterday.toDateString()) return `${t('time.yesterday')}, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
         return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
     return (
         <div className="flex flex-col h-full bg-zinc-100 dark:bg-zinc-900">
             {/* Compact Header */}
-            <div className="shrink-0 p-4 bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+            <div className="sticky top-0 z-20 shrink-0 border-b border-zinc-200 bg-white/95 p-4 backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/95">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-700 rounded-lg">
                             <History size={18} className="text-zinc-700 dark:text-zinc-300" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">Transaction History</h1>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">View and reprint receipts</p>
+                            <h1 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{t('history.title')}</h1>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('history.subtitle')}</p>
                         </div>
                     </div>
                     <button onClick={exportHistory} className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-600 border border-zinc-200 dark:border-zinc-600 rounded-lg font-medium text-sm">
-                        <Download size={14} className="text-zinc-500" /> Export
+                        <Download size={14} className="text-zinc-500" /> {t('common.export')}
                     </button>
                 </div>
 
@@ -177,31 +180,31 @@ export function HistoryPage() {
                 <div className="grid grid-cols-4 gap-2 mb-3">
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Total</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('history.total')}</span>
                             <TrendingUp size={12} className="text-zinc-400" />
                         </div>
                         <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{currencySymbol}{stats.totalSales.toLocaleString('en-IN')}</p>
-                        <p className="text-[10px] text-zinc-400">{stats.totalTransactions} orders</p>
+                        <p className="text-[10px] text-zinc-400">{stats.totalTransactions} {t('history.orders')}</p>
                     </div>
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Today</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('history.today')}</span>
                             <Calendar size={12} className="text-emerald-500" />
                         </div>
                         <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{currencySymbol}{stats.todaySales.toLocaleString('en-IN')}</p>
-                        <p className="text-[10px] text-zinc-400">{stats.todayTransactions} orders</p>
+                        <p className="text-[10px] text-zinc-400">{stats.todayTransactions} {t('history.orders')}</p>
                     </div>
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Average</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('history.average')}</span>
                             <Package size={12} className="text-amber-500" />
                         </div>
                         <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{currencySymbol}{stats.avgTransaction.toFixed(0)}</p>
-                        <p className="text-[10px] text-zinc-400">Per order</p>
+                        <p className="text-[10px] text-zinc-400">{t('history.perOrder')}</p>
                     </div>
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-medium text-zinc-500 uppercase">Showing</span>
+                            <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('history.showing')}</span>
                             <FileText size={12} className="text-zinc-400" />
                         </div>
                         <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{filteredTransactions.length}</p>
@@ -213,11 +216,11 @@ export function HistoryPage() {
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                        <input type="text" placeholder="Search by ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                        <input type="text" placeholder={t('history.searchPlaceholder')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-9 pr-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm" />
                     </div>
                     <div className="flex bg-zinc-100 dark:bg-zinc-900 rounded-lg p-0.5 border border-zinc-200 dark:border-zinc-700">
-                        {[{ value: 'all', label: 'All' }, { value: 'today', label: 'Today' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }].map((option) => (
+                        {[{ value: 'all', label: t('common.all') }, { value: 'today', label: t('history.today') }, { value: 'week', label: t('vendors.week') }, { value: 'month', label: t('vendors.month') }].map((option) => (
                             <button key={option.value} onClick={() => setDateFilter(option.value as any)}
                                 className={`px-2.5 py-1.5 rounded-md text-xs font-medium ${dateFilter === option.value ? 'bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 hover:text-zinc-700'}`}>
                                 {option.label}
@@ -226,7 +229,7 @@ export function HistoryPage() {
                     </div>
                     <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)}
                         className="px-2 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm">
-                        <option value="all">All Payments</option>
+                        <option value="all">{t('history.allPayments')}</option>
                         {paymentMethods.map(method => <option key={method} value={method}>{method}</option>)}
                     </select>
                 </div>
@@ -238,7 +241,7 @@ export function HistoryPage() {
                     {isLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center">
                             <div className="w-8 h-8 border-3 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-400 rounded-full"></div>
-                            <p className="mt-3 text-zinc-500 text-sm">Loading...</p>
+                            <p className="mt-3 text-zinc-500 text-sm">{t('common.loading')}</p>
                         </div>
                     ) : (
                         <>
@@ -246,11 +249,11 @@ export function HistoryPage() {
                                 <table className="w-full text-left">
                                     <thead className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 sticky top-0">
                                         <tr>
-                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">Order</th>
-                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">Date & Time</th>
-                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">Payment</th>
-                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500 text-right">Amount</th>
-                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500 text-right">Actions</th>
+                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">{t('history.order')}</th>
+                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">{t('history.dateTime')}</th>
+                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">{t('history.payment')}</th>
+                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500 text-right">{t('history.amount')}</th>
+                                            <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500 text-right">{t('inventory.actions')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-700">
@@ -300,10 +303,10 @@ export function HistoryPage() {
                                 <p className="text-xs text-zinc-500">{filteredTransactions.length} of {totalTransactions} transactions</p>
                                 <div className="flex items-center gap-1.5">
                                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">Prev</button>
+                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">{t('common.prev')}</button>
                                     <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{currentPage}/{totalPages}</span>
                                     <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">Next</button>
+                                        className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">{t('common.next')}</button>
                                 </div>
                             </div>
                         </>
@@ -343,19 +346,19 @@ export function HistoryPage() {
                             </div>
                             <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700 space-y-1.5">
                                 <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                                    <span>Subtotal</span>
+                                    <span>{t('receipt.subtotal')}</span>
                                     <span>{currencySymbol}{selectedTx.items.reduce((sum, item) => sum + ((typeof item.price_at_sale === 'number' ? item.price_at_sale : 0) * (item.quantity || 0)), 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                                    <span>Tax</span>
+                                    <span>{t('receipt.tax', { rate: useSettingsStore.getState().taxRate })}</span>
                                     <span>{currencySymbol}{((selectedTx.total_amount || 0) - selectedTx.items.reduce((sum, item) => sum + ((typeof item.price_at_sale === 'number' ? item.price_at_sale : 0) * (item.quantity || 0)), 0)).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-zinc-800 dark:text-zinc-100 pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
-                                    <span>Total</span>
+                                    <span>{t('common.total')}</span>
                                     <span className="text-zinc-700 dark:text-zinc-300">{currencySymbol}{(selectedTx.total_amount || 0).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between items-center pt-1.5">
-                                    <span className="text-xs text-zinc-500">Payment</span>
+                                    <span className="text-xs text-zinc-500">{t('history.payment')}</span>
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium ${getPaymentBadgeClass(selectedTx.payment_method)}`}>
                                         {getPaymentIcon(selectedTx.payment_method)} {selectedTx.payment_method || 'Unknown'}
                                     </span>
@@ -363,9 +366,9 @@ export function HistoryPage() {
                             </div>
                         </div>
                         <div className="p-4 bg-zinc-50 dark:bg-zinc-900/50 flex gap-2">
-                            <button onClick={() => setShowModal(false)} className="flex-1 px-3 py-2 border border-zinc-200 dark:border-zinc-600 rounded-lg font-medium text-sm hover:bg-white dark:hover:bg-zinc-700">Close</button>
+                            <button onClick={() => setShowModal(false)} className="flex-1 px-3 py-2 border border-zinc-200 dark:border-zinc-600 rounded-lg font-medium text-sm hover:bg-white dark:hover:bg-zinc-700">{t('common.close')}</button>
                             <button onClick={() => handlePrintReceipt(selectedTx)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-700 hover:bg-zinc-600 dark:bg-zinc-600 dark:hover:bg-zinc-500 text-white rounded-lg font-medium text-sm">
-                                <Printer size={14} /> Print
+                                <Printer size={14} /> {t('common.print')}
                             </button>
                         </div>
                     </div>

@@ -4,23 +4,27 @@ import { cn } from '../lib/utils';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { UpdateBanner } from './UpdateBanner';
 import { useAppUpdater } from '../hooks/useAppUpdater';
+import { UpdaterContext } from '../context/UpdaterContext';
+import { useI18n } from '../i18n';
 
 export function Layout() {
-    const { storeName, profileImage } = useSettingsStore();
+    const { storeName, profileImage, vendorsEnabled } = useSettingsStore();
+    const { t } = useI18n();
     const updater = useAppUpdater();
     const initial = storeName.charAt(0) || 'L';
 
     const navItems = [
-        { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-        { path: '/pos', icon: ShoppingCart, label: 'POS' },
-        { path: '/inventory', icon: Package, label: 'Inventory' },
-        { path: '/vendors', icon: Truck, label: 'Vendors' },
-        { path: '/history', icon: History, label: 'History' },
-        { path: '/barcode', icon: Barcode, label: 'Barcode' },
-        { path: '/settings', icon: Settings, label: 'Settings' },
-    ];
+        { path: '/dashboard', icon: LayoutDashboard, label: t('layout.dashboard') },
+        { path: '/pos', icon: ShoppingCart, label: t('layout.pos') },
+        { path: '/inventory', icon: Package, label: t('layout.inventory') },
+        { path: '/vendors', icon: Truck, label: t('layout.vendors'), hidden: !vendorsEnabled },
+        { path: '/history', icon: History, label: t('layout.history') },
+        { path: '/barcode', icon: Barcode, label: t('layout.barcode') },
+        { path: '/settings', icon: Settings, label: t('layout.settings') },
+    ].filter((item) => !item.hidden);
 
     return (
+        <UpdaterContext.Provider value={updater}>
         <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100">
             {/* Desktop Sidebar */}
             <aside className="hidden h-screen w-[220px] shrink-0 flex-col border-r border-slate-200 bg-white lg:flex dark:border-zinc-800 dark:bg-zinc-900">
@@ -35,7 +39,7 @@ export function Layout() {
                     </div>
                     <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{storeName || 'Loomix'}</p>
-                        <p className="truncate text-[11px] text-slate-400">Retail POS</p>
+                        <p className="truncate text-[11px] text-slate-400">{t('layout.retailPos')}</p>
                     </div>
                 </div>
 
@@ -64,7 +68,7 @@ export function Layout() {
                 <div className="border-t border-slate-100 px-4 py-3 dark:border-zinc-800">
                     <div className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">Ready</span>
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t('common.ready')}</span>
                     </div>
                 </div>
             </aside>
@@ -103,5 +107,6 @@ export function Layout() {
                 </div>
             </main>
         </div>
+        </UpdaterContext.Provider>
     );
 }

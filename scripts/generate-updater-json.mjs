@@ -110,14 +110,16 @@ function readVersion(projectRoot, args) {
 function detectArtifact(relativePath) {
   const normalized = relativePath.toLowerCase();
 
-  if (normalized.endsWith('.exe') && normalized.includes('/nsis/')) {
+  // Match both 'nsis/foo.exe' (no leading slash) and '.../nsis/foo.exe'
+  if (normalized.endsWith('.exe') && /(?:^|\/)nsis\//.test(normalized)) {
     return {
       platform: `windows-${detectArch(relativePath)}`,
       priority: 300,
     };
   }
 
-  if (normalized.endsWith('.msi') && normalized.includes('/msi/')) {
+  // Match both 'msi/foo.msi' (no leading slash) and '.../msi/foo.msi'
+  if (normalized.endsWith('.msi') && /(?:^|\/)msi\//.test(normalized)) {
     return {
       platform: `windows-${detectArch(relativePath)}`,
       priority: 200,

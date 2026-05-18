@@ -32,6 +32,7 @@ impl Database {
                 sku TEXT UNIQUE NOT NULL,
                 name TEXT NOT NULL,
                 price REAL NOT NULL,
+                wholesale_price REAL DEFAULT 0,
                 stock INTEGER DEFAULT 0,
                 category TEXT,
                 image TEXT,
@@ -45,6 +46,7 @@ impl Database {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 total_amount REAL NOT NULL,
                 payment_method TEXT NOT NULL,
+                billing_mode TEXT DEFAULT 'retail',
                 customer_name TEXT,
                 customer_phone TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -102,7 +104,9 @@ impl Database {
         let _ = conn.execute("ALTER TABLE transactions ADD COLUMN customer_phone TEXT", []);
         let _ = conn.execute("ALTER TABLE transactions ADD COLUMN customer_dob TEXT", []);
         let _ = conn.execute("ALTER TABLE products ADD COLUMN cost_price REAL DEFAULT 0", []);
+        let _ = conn.execute("ALTER TABLE products ADD COLUMN wholesale_price REAL DEFAULT 0", []);
         let _ = conn.execute("ALTER TABLE transactions ADD COLUMN extra_discount REAL DEFAULT 0", []);
+        let _ = conn.execute("ALTER TABLE transactions ADD COLUMN billing_mode TEXT DEFAULT 'retail'", []);
         let _ = conn.execute("ALTER TABLE vendors ADD COLUMN vendor_id INTEGER", []);
         
         // Indices
@@ -171,7 +175,7 @@ impl Database {
         let total: i32 = count_stmt.query_row(rusqlite::params_from_iter(query_params.iter()), |row| row.get(0)).unwrap_or(0);
 
         // Get items
-        let items_sql = format!("SELECT id, total_amount, extra_discount, payment_method, customer_name, customer_phone, customer_dob, created_at {} ORDER BY created_at DESC LIMIT ? OFFSET ?", base_sql);
+        let items_sql = format!("SELECT id, total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob, created_at {} ORDER BY created_at DESC LIMIT ? OFFSET ?", base_sql);
         query_params.push(Box::new(page_size));
         query_params.push(Box::new(offset));
 
@@ -182,10 +186,11 @@ impl Database {
                  total_amount: row.get(1)?,
                  extra_discount: row.get(2)?,
                  payment_method: row.get(3)?,
-                 customer_name: row.get(4)?,
-                 customer_phone: row.get(5)?,
-                 customer_dob: row.get(6)?,
-                 created_at: row.get(7)?,
+                 billing_mode: row.get(4).unwrap_or("retail".to_string()),
+                 customer_name: row.get(5)?,
+                 customer_phone: row.get(6)?,
+                 customer_dob: row.get(7)?,
+                 created_at: row.get(8)?,
              })
         })?;
 
@@ -198,17 +203,18 @@ impl Database {
     pub fn get_transaction_by_id(&self, id: i32) -> Result<Option<TransactionDetails>> {
         let conn = self.get_connection()?;
         let tx: Option<TransactionHistoryItem> = conn.query_row(
-            "SELECT id, total_amount, extra_discount, payment_method, customer_name, customer_phone, customer_dob, created_at FROM transactions WHERE id = ?",
+            "SELECT id, total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob, created_at FROM transactions WHERE id = ?",
             [id],
             |row| Ok(TransactionHistoryItem {
                  id: row.get(0)?,
                  total_amount: row.get(1)?,
                  extra_discount: row.get(2)?,
                  payment_method: row.get(3)?,
-                 customer_name: row.get(4)?,
-                 customer_phone: row.get(5)?,
-                 customer_dob: row.get(6)?,
-                 created_at: row.get(7)?,
+                 billing_mode: row.get(4).unwrap_or("retail".to_string()),
+                 customer_name: row.get(5)?,
+                 customer_phone: row.get(6)?,
+                 customer_dob: row.get(7)?,
+                 created_at: row.get(8)?,
             })
         ).optional()?;
 
@@ -238,7 +244,7 @@ impl Database {
         let conn = self.get_connection()?;
         let offset = (page - 1) * page_size;
         
-        let mut sql = "SELECT id, sku, name, price, stock, category, created_at, cost_price FROM products WHERE 1=1".to_string();
+        let mut sql = "SELECT id, sku, name, price, wholesale_price, stock, category, created_at, cost_price FROM products WHERE 1=1".to_string();
         let mut query_params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if !search.is_empty() {
@@ -264,10 +270,11 @@ impl Database {
                 sku: row.get(1)?,
                 name: row.get(2)?,
                 price: row.get(3)?,
-                stock: row.get(4)?,
-                category: row.get(5)?,
-                created_at: row.get(6)?,
-                cost_price: row.get(7).unwrap_or(0.0),
+                wholesale_price: row.get(4).unwrap_or(0.0),
+                stock: row.get(5)?,
+                category: row.get(6)?,
+                created_at: row.get(7)?,
+                cost_price: row.get(8).unwrap_or(0.0),
             })
         })?;
 
@@ -304,7 +311,7 @@ impl Database {
 
     pub fn get_product_by_sku(&self, sku: String) -> Result<Option<Product>> {
         let conn = self.get_connection()?;
-        let mut stmt = conn.prepare("SELECT id, sku, name, price, stock, category, created_at, cost_price FROM products WHERE sku = ?")?;
+        let mut stmt = conn.prepare("SELECT id, sku, name, price, wholesale_price, stock, category, created_at, cost_price FROM products WHERE sku = ?")?;
         
         stmt.query_row([sku], |row| {
             Ok(Product {
@@ -312,10 +319,11 @@ impl Database {
                 sku: row.get(1)?,
                 name: row.get(2)?,
                 price: row.get(3)?,
-                stock: row.get(4)?,
-                category: row.get(5)?,
-                created_at: row.get(6)?,
-                cost_price: row.get(7).unwrap_or(0.0),
+                wholesale_price: row.get(4).unwrap_or(0.0),
+                stock: row.get(5)?,
+                category: row.get(6)?,
+                created_at: row.get(7)?,
+                cost_price: row.get(8).unwrap_or(0.0),
             })
         }).optional()
     }
@@ -324,8 +332,16 @@ impl Database {
         println!("Adding product: {:?}", product);
         let conn = self.get_connection()?;
         let res = conn.execute(
-            "INSERT INTO products (sku, name, price, cost_price, stock, category) VALUES (?, ?, ?, ?, ?, ?)",
-            params![product.sku, product.name, product.price, product.cost_price, product.stock, product.category],
+            "INSERT INTO products (sku, name, price, wholesale_price, cost_price, stock, category) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            params![
+                product.sku,
+                product.name,
+                product.price,
+                product.wholesale_price,
+                product.cost_price,
+                product.stock,
+                product.category
+            ],
         );
         match res {
             Ok(_) => {
@@ -343,8 +359,17 @@ impl Database {
     pub fn update_product(&self, product: Product) -> Result<()> {
         let conn = self.get_connection()?;
         conn.execute(
-            "UPDATE products SET sku=?, name=?, price=?, cost_price=?, stock=?, category=? WHERE id=?",
-            params![product.sku, product.name, product.price, product.cost_price, product.stock, product.category, product.id],
+            "UPDATE products SET sku=?, name=?, price=?, wholesale_price=?, cost_price=?, stock=?, category=? WHERE id=?",
+            params![
+                product.sku,
+                product.name,
+                product.price,
+                product.wholesale_price,
+                product.cost_price,
+                product.stock,
+                product.category,
+                product.id
+            ],
         )?;
         Ok(())
     }
@@ -363,11 +388,12 @@ impl Database {
 
         {
              tx.execute(
-                "INSERT INTO transactions (total_amount, extra_discount, payment_method, customer_name, customer_phone, customer_dob) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO transactions (total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 params![
                     data.total_amount,
                     data.extra_discount,
                     data.payment_method,
+                    data.billing_mode,
                     data.customer_name,
                     data.customer_phone,
                     data.customer_dob
@@ -583,6 +609,7 @@ pub struct Product {
     pub sku: String,
     pub name: String,
     pub price: f64,
+    pub wholesale_price: f64,
     pub stock: i32,
     pub category: String,
     pub created_at: Option<String>,
@@ -594,6 +621,7 @@ pub struct TransactionData {
     pub total_amount: f64,
     pub extra_discount: f64,
     pub payment_method: String,
+    pub billing_mode: String,
     pub customer_name: Option<String>,
     pub customer_phone: Option<String>,
     pub customer_dob: Option<String>,
@@ -631,6 +659,7 @@ pub struct TransactionHistoryItem {
     pub total_amount: f64,
     pub extra_discount: f64,
     pub payment_method: String,
+    pub billing_mode: String,
     pub customer_name: Option<String>,
     pub customer_phone: Option<String>,
     pub customer_dob: Option<String>,

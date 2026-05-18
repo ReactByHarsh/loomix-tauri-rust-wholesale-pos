@@ -12,18 +12,25 @@ export interface BarcodeLabelData {
     svgMarkup: string;
     price: number;
     quantity: number;
+    currencySymbol?: string;
 }
 
-export const generateBarcodeLabelHTML = (data: BarcodeLabelData) => {
-    const copies = Math.max(1, Math.floor(data.quantity || 1));
-    const labels = Array.from({ length: copies }, (_, index) => `
+const renderLabels = (items: BarcodeLabelData[]) => items.flatMap((item) => {
+    const copies = Math.max(1, Math.floor(item.quantity || 1));
+    const currencySymbol = item.currencySymbol || '₹';
+
+    return Array.from({ length: copies }, (_, index) => `
         <section class="label ${index < copies - 1 ? 'page-break' : ''}">
-            <div class="name">${escapeHtml(data.storeName || 'Store')}</div>
-            <div class="barcode">${data.svgMarkup}</div>
-            <div class="code">${escapeHtml(data.barcodeValue)}</div>
-            <div class="price">Rs. ${data.price.toFixed(2)}</div>
+            <div class="name">${escapeHtml(item.storeName || 'Store')}</div>
+            <div class="barcode">${item.svgMarkup}</div>
+            <div class="code">${escapeHtml(item.barcodeValue)}</div>
+            <div class="price">${escapeHtml(currencySymbol)} ${item.price.toFixed(2)}</div>
         </section>
-    `).join('');
+    `);
+}).join('');
+
+export const generateBarcodeBatchHTML = (items: BarcodeLabelData[]) => {
+    const labels = renderLabels(items);
 
     return `
     <!DOCTYPE html>
@@ -89,5 +96,11 @@ export const generateBarcodeLabelHTML = (data: BarcodeLabelData) => {
     </head>
     <body>${labels}</body>
     </html>
+    `;
+};
+
+export const generateBarcodeLabelHTML = (data: BarcodeLabelData) => {
+    return `
+    ${generateBarcodeBatchHTML([data])}
     `;
 };
