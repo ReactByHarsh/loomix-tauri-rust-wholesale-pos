@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    AlertTriangle, ArrowDownToLine, Check, CheckCircle2, Clock, Info, LoaderCircle, Monitor, Moon, Palette, Printer, RefreshCcw, Save, Settings, Sparkles, Store, Sun, TestTube, Trash2,
+    AlertTriangle, ArrowDownToLine, Check, CheckCircle2, Clock, Database, Info, LoaderCircle, Monitor, Moon, Palette, Printer, RefreshCcw, Save, Settings, Sparkles, Store, Sun, TestTube, Trash2, Upload,
 } from 'lucide-react';
 import { useSettingsStore, type ReceiptPaperSize, type AppLanguage } from '../store/useSettingsStore';
 import { generateReceiptHTML, printReceipt } from '../utils/receiptTemplate';
@@ -11,6 +11,25 @@ import { BillingModeToggle } from '../components/BillingModeToggle';
 function cn(...classes: (string | undefined | null | false)[]) { return classes.filter(Boolean).join(' '); }
 
 interface PrinterInfo { name: string; isDefault: boolean; }
+interface SettingsBackupData {
+    storeName: string;
+    storeAddress: string;
+    storePhone: string;
+    receiptFooter: string;
+    taxRate: number;
+    taxEnabled: boolean;
+    currency: string;
+    theme: string;
+    billPrinter: string;
+    barcodePrinter: string;
+    billPaperSize: ReceiptPaperSize;
+    language: AppLanguage;
+    defaultBillingMode: 'retail' | 'wholesale';
+    vendorsEnabled: boolean;
+}
+
+const BARCODE_STORAGE_KEY = 'loomix-barcode-history';
+const BARCODE_HISTORY_LIMIT = 100;
 
 export function SettingsPage() {
     const {
@@ -31,6 +50,12 @@ export function SettingsPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+    const [backupAction, setBackupAction] = useState<string | null>(null);
+
+    const barcodeRestoreInputRef = useRef<HTMLInputElement>(null);
+    const inventoryRestoreInputRef = useRef<HTMLInputElement>(null);
+    const historyRestoreInputRef = useRef<HTMLInputElement>(null);
+    const fullRestoreInputRef = useRef<HTMLInputElement>(null);
 
     // Local state (unsaved)
     const [localStoreName, setLocalStoreName] = useState(storeName);
@@ -141,6 +166,168 @@ export function SettingsPage() {
         if (diffHr < 24) return `${diffHr}h ago`;
         return date.toLocaleDateString();
     }
+
+    const getSettingsBackupData = (): SettingsBackupData => ({
+        storeName,
+        storeAddress,
+        storePhone,
+        receiptFooter,
+        taxRate,
+        taxEnabled,
+        currency,
+        theme,
+        billPrinter,
+        barcodePrinter,
+        billPaperSize,
+        language,
+        defaultBillingMode,
+        vendorsEnabled,
+    });
+
+    const applySettingsBackup = (settings: Partial<SettingsBackupData>) => {
+        if (typeof settings.storeName === 'string') { setStoreName(settings.storeName); setLocalStoreName(settings.storeName); }
+        if (typeof settings.storeAddress === 'string') { setStoreAddress(settings.storeAddress); setLocalStoreAddress(settings.storeAddress); }
+        if (typeof settings.storePhone === 'string') { setStorePhone(settings.storePhone); setLocalStorePhone(settings.storePhone); }
+        if (typeof settings.receiptFooter === 'string') { setReceiptFooter(settings.receiptFooter); setLocalReceiptFooter(settings.receiptFooter); }
+        if (typeof settings.taxRate === 'number') { setTaxRate(settings.taxRate); setLocalTaxRate(String(settings.taxRate)); }
+        if (typeof settings.taxEnabled === 'boolean') { setTaxEnabled(settings.taxEnabled); setLocalTaxEnabled(settings.taxEnabled); }
+        if (settings.currency === 'INR' || settings.currency === 'USD' || settings.currency === 'EUR') { setCurrency(settings.currency); setLocalCurrency(settings.currency); }
+        if (settings.theme === 'system' || settings.theme === 'light' || settings.theme === 'dark') { setTheme(settings.theme); setLocalTheme(settings.theme); }
+        if (typeof settings.billPrinter === 'string') { setBillPrinter(settings.billPrinter); setLocalBillPrinter(settings.billPrinter); }
+        if (typeof settings.barcodePrinter === 'string') { setBarcodePrinter(settings.barcodePrinter); setLocalBarcodePrinter(settings.barcodePrinter); }
+        if (settings.billPaperSize === '3-inch' || settings.billPaperSize === '4-inch') { setBillPaperSize(settings.billPaperSize); setLocalBillPaperSize(settings.billPaperSize); }
+        if (settings.language === 'en' || settings.language === 'hi' || settings.language === 'mr' || settings.language === 'bn' || settings.language === 'gu') { setLanguage(settings.language); setLocalLanguage(settings.language); }
+        if (settings.defaultBillingMode === 'retail' || settings.defaultBillingMode === 'wholesale') { setDefaultBillingMode(settings.defaultBillingMode); setLocalDefaultBillingMode(settings.defaultBillingMode); }
+        if (typeof settings.vendorsEnabled === 'boolean') { setVendorsEnabled(settings.vendorsEnabled); setLocalVendorsEnabled(settings.vendorsEnabled); }
+    };
+
+    const readJsonFile = async (file: File) => JSON.parse(await file.text());
+
+    const downloadJsonFile = (filename: string, data: unknown) => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const getSavedBarcodeHistory = () => {
+        try {
+            const raw = window.localStorage.getItem(BARCODE_STORAGE_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.slice(0, BARCODE_HISTORY_LIMIT) : [];
+        } catch {
+            return [];
+        }
+    };
+
+    const setSavedBarcodeHistory = (items: unknown) => {
+        const safeItems = Array.isArray(items) ? items.slice(0, BARCODE_HISTORY_LIMIT) : [];
+        window.localStorage.setItem(BARCODE_STORAGE_KEY, JSON.stringify(safeItems));
+    };
+
+    const withBackupAction = async (action: string, work: () => Promise<void>) => {
+        setBackupAction(action);
+        try {
+            await work();
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Backup operation failed.');
+        } finally {
+            setBackupAction(null);
+        }
+    };
+
+    const handleBackupBarcodes = async () => withBackupAction('backup-barcodes', async () => {
+        downloadJsonFile(`loomix_barcodes_${new Date().toISOString().split('T')[0]}.json`, {
+            exportedAt: new Date().toISOString(),
+            type: 'saved-barcodes',
+            data: getSavedBarcodeHistory(),
+        });
+    });
+
+    const handleRestoreBarcodes = async (file?: File | null) => {
+        if (!file) return;
+        await withBackupAction('restore-barcodes', async () => {
+            const parsed = await readJsonFile(file);
+            const data = Array.isArray(parsed) ? parsed : parsed?.data;
+            setSavedBarcodeHistory(data);
+            alert('Saved barcode data restored.');
+        });
+    };
+
+    const handleBackupInventory = async () => withBackupAction('backup-inventory', async () => {
+        // @ts-ignore
+        const result = await window.api?.exportProducts?.();
+        if (!result?.success) throw new Error(result?.error || 'Unable to backup inventory.');
+        downloadJsonFile(`loomix_inventory_${new Date().toISOString().split('T')[0]}.json`, {
+            exportedAt: new Date().toISOString(),
+            type: 'inventory',
+            data: result.data || [],
+        });
+    });
+
+    const handleRestoreInventory = async (file?: File | null) => {
+        if (!file) return;
+        await withBackupAction('restore-inventory', async () => {
+            const parsed = await readJsonFile(file);
+            const data = Array.isArray(parsed) ? parsed : parsed?.data;
+            // @ts-ignore
+            const result = await window.api?.restoreProductsBackup?.(data || []);
+            if (!result?.success) throw new Error(result?.error || 'Unable to restore inventory.');
+            alert('Inventory data restored.');
+        });
+    };
+
+    const handleBackupHistory = async () => withBackupAction('backup-history', async () => {
+        // @ts-ignore
+        const data = await window.api?.exportTransactionBackup?.();
+        downloadJsonFile(`loomix_transactions_${new Date().toISOString().split('T')[0]}.json`, {
+            exportedAt: new Date().toISOString(),
+            type: 'transaction-history',
+            data,
+        });
+    });
+
+    const handleRestoreHistory = async (file?: File | null) => {
+        if (!file) return;
+        await withBackupAction('restore-history', async () => {
+            const parsed = await readJsonFile(file);
+            const data = parsed?.data ?? parsed;
+            // @ts-ignore
+            const result = await window.api?.restoreTransactionBackup?.(data);
+            if (!result?.success) throw new Error(result?.error || 'Unable to restore transaction history.');
+            alert('Transaction history restored.');
+        });
+    };
+
+    const handleBackupAll = async () => withBackupAction('backup-all', async () => {
+        // @ts-ignore
+        const db = await window.api?.exportFullBackup?.();
+        downloadJsonFile(`loomix_full_backup_${new Date().toISOString().split('T')[0]}.json`, {
+            exportedAt: new Date().toISOString(),
+            type: 'full-backup',
+            settings: getSettingsBackupData(),
+            savedBarcodes: getSavedBarcodeHistory(),
+            db,
+        });
+    });
+
+    const handleRestoreAll = async (file?: File | null) => {
+        if (!file) return;
+        await withBackupAction('restore-all', async () => {
+            const parsed = await readJsonFile(file);
+            // @ts-ignore
+            const result = await window.api?.restoreFullBackup?.(parsed?.db ?? parsed);
+            if (!result?.success) throw new Error(result?.error || 'Unable to restore full backup.');
+            if (parsed?.settings) applySettingsBackup(parsed.settings);
+            if (parsed?.savedBarcodes) setSavedBarcodeHistory(parsed.savedBarcodes);
+            alert('Full backup restored. The app will reload to refresh all pages.');
+            window.location.reload();
+        });
+    };
 
     return (
         <div className="h-full overflow-y-auto bg-slate-50 dark:bg-zinc-950">
@@ -457,6 +644,100 @@ export function SettingsPage() {
                             </div>
                         </div>
                         )}
+
+                        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                            <div className="flex items-center gap-2">
+                                <Database size={16} className="text-indigo-600 dark:text-indigo-400" />
+                                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Backup & Restore</h2>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                                Backup and restore saved barcodes, inventory, transaction history, or the full app data.
+                            </p>
+
+                            <div className="mt-4 grid gap-3">
+                                {[
+                                    {
+                                        key: 'barcodes',
+                                        title: 'Saved Barcodes',
+                                        description: 'Back up the recent barcode list stored in the app, capped at 100 items.',
+                                        onBackup: () => void handleBackupBarcodes(),
+                                        onRestoreClick: () => barcodeRestoreInputRef.current?.click(),
+                                        inputRef: barcodeRestoreInputRef,
+                                        onRestore: handleRestoreBarcodes,
+                                    },
+                                    {
+                                        key: 'inventory',
+                                        title: 'Inventory Data',
+                                        description: 'Back up all products including retail price, wholesale price, cost, stock, and categories.',
+                                        onBackup: () => void handleBackupInventory(),
+                                        onRestoreClick: () => inventoryRestoreInputRef.current?.click(),
+                                        inputRef: inventoryRestoreInputRef,
+                                        onRestore: handleRestoreInventory,
+                                    },
+                                    {
+                                        key: 'history',
+                                        title: 'Transaction History',
+                                        description: 'Back up all transactions and transaction items so history can be restored exactly.',
+                                        onBackup: () => void handleBackupHistory(),
+                                        onRestoreClick: () => historyRestoreInputRef.current?.click(),
+                                        inputRef: historyRestoreInputRef,
+                                        onRestore: handleRestoreHistory,
+                                    },
+                                    {
+                                        key: 'all',
+                                        title: 'Full Project Data',
+                                        description: 'Back up settings, saved barcodes, inventory, transactions, vendors, and vendor profiles together.',
+                                        onBackup: () => void handleBackupAll(),
+                                        onRestoreClick: () => fullRestoreInputRef.current?.click(),
+                                        inputRef: fullRestoreInputRef,
+                                        onRestore: handleRestoreAll,
+                                    },
+                                ].map((item) => {
+                                    const isBackingUp = backupAction === `backup-${item.key}`;
+                                    const isRestoring = backupAction === `restore-${item.key}`;
+
+                                    return (
+                                        <div key={item.key} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-zinc-700 dark:bg-zinc-950/60">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                <div>
+                                                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{item.title}</h3>
+                                                    <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{item.description}</p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={item.onBackup}
+                                                        disabled={Boolean(backupAction)}
+                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                                                    >
+                                                        <ArrowDownToLine size={13} />
+                                                        {isBackingUp ? 'Backing up...' : 'Backup'}
+                                                    </button>
+                                                    <button
+                                                        onClick={item.onRestoreClick}
+                                                        disabled={Boolean(backupAction)}
+                                                        className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                                                    >
+                                                        <Upload size={13} />
+                                                        {isRestoring ? 'Restoring...' : 'Restore'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <input
+                                                ref={item.inputRef}
+                                                type="file"
+                                                accept=".json,application/json"
+                                                className="hidden"
+                                                onChange={(event) => {
+                                                    const selected = event.target.files?.[0];
+                                                    void item.onRestore(selected);
+                                                    event.currentTarget.value = '';
+                                                }}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                         {/* Data Management */}
                         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">

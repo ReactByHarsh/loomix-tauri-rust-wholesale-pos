@@ -1,8 +1,8 @@
-use rusqlite::{params, Connection, Result, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, Result};
 // use std::path::Path;
+use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tauri::Manager;
-use serde::{Serialize, Deserialize};
 
 pub struct Database {
     path: String,
@@ -10,10 +10,13 @@ pub struct Database {
 
 impl Database {
     pub fn new(app_handle: &AppHandle) -> Self {
-        let app_dir = app_handle.path().app_data_dir().expect("failed to get app data dir");
+        let app_dir = app_handle
+            .path()
+            .app_data_dir()
+            .expect("failed to get app data dir");
         std::fs::create_dir_all(&app_dir).unwrap();
         let path = app_dir.join("loomix.db");
-        
+
         Database {
             path: path.to_str().unwrap().to_string(),
         }
@@ -101,21 +104,54 @@ impl Database {
 
         // Migrations
         let _ = conn.execute("ALTER TABLE transactions ADD COLUMN customer_name TEXT", []);
-        let _ = conn.execute("ALTER TABLE transactions ADD COLUMN customer_phone TEXT", []);
+        let _ = conn.execute(
+            "ALTER TABLE transactions ADD COLUMN customer_phone TEXT",
+            [],
+        );
         let _ = conn.execute("ALTER TABLE transactions ADD COLUMN customer_dob TEXT", []);
-        let _ = conn.execute("ALTER TABLE products ADD COLUMN cost_price REAL DEFAULT 0", []);
-        let _ = conn.execute("ALTER TABLE products ADD COLUMN wholesale_price REAL DEFAULT 0", []);
-        let _ = conn.execute("ALTER TABLE transactions ADD COLUMN extra_discount REAL DEFAULT 0", []);
-        let _ = conn.execute("ALTER TABLE transactions ADD COLUMN billing_mode TEXT DEFAULT 'retail'", []);
+        let _ = conn.execute(
+            "ALTER TABLE products ADD COLUMN cost_price REAL DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE products ADD COLUMN wholesale_price REAL DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE transactions ADD COLUMN extra_discount REAL DEFAULT 0",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE transactions ADD COLUMN billing_mode TEXT DEFAULT 'retail'",
+            [],
+        );
         let _ = conn.execute("ALTER TABLE vendors ADD COLUMN vendor_id INTEGER", []);
-        
+
         // Indices
-        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at)", []);
-        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku)", []);
-        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)", []);
-        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_vendors_date ON vendors(date)", []);
-        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_vendors_vendor_name ON vendors(vendor_name)", []);
-        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_vendors_vendor_id ON vendors(vendor_id)", []);
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_vendors_date ON vendors(date)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_vendors_vendor_name ON vendors(vendor_name)",
+            [],
+        );
+        let _ = conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_vendors_vendor_id ON vendors(vendor_id)",
+            [],
+        );
 
         // Seed
         let count: i64 = conn.query_row("SELECT count(*) FROM products", [], |row| row.get(0))?;
@@ -141,38 +177,51 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_transaction_history(&self, page: i32, page_size: i32, search: String, payment_filter: String, date_filter: String) -> Result<TransactionHistoryResponse> {
+    pub fn get_transaction_history(
+        &self,
+        page: i32,
+        page_size: i32,
+        search: String,
+        payment_filter: String,
+        date_filter: String,
+    ) -> Result<TransactionHistoryResponse> {
         let conn = self.get_connection()?;
         let offset = (page - 1) * page_size;
-        
+
         let mut base_sql = "FROM transactions WHERE 1=1".to_string();
         let mut query_params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if !search.is_empty() {
-             base_sql.push_str(" AND (cast(id as text) LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ?)");
-             let pattern = format!("%{}%", search);
-             query_params.push(Box::new(pattern.clone()));
-             query_params.push(Box::new(pattern.clone()));
-             query_params.push(Box::new(pattern));
+            base_sql.push_str(
+                " AND (cast(id as text) LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ?)",
+            );
+            let pattern = format!("%{}%", search);
+            query_params.push(Box::new(pattern.clone()));
+            query_params.push(Box::new(pattern.clone()));
+            query_params.push(Box::new(pattern));
         }
-        
+
         if payment_filter != "all" {
-             base_sql.push_str(" AND payment_method = ?");
-             query_params.push(Box::new(payment_filter));
+            base_sql.push_str(" AND payment_method = ?");
+            query_params.push(Box::new(payment_filter));
         }
 
         if date_filter == "today" {
-             base_sql.push_str(" AND date(created_at) = date('now', 'localtime')");
+            base_sql.push_str(" AND date(created_at) = date('now', 'localtime')");
         } else if date_filter == "week" {
-             base_sql.push_str(" AND created_at >= date('now', 'localtime', '-7 days')");
+            base_sql.push_str(" AND created_at >= date('now', 'localtime', '-7 days')");
         } else if date_filter == "month" {
-             base_sql.push_str(" AND created_at >= date('now', 'localtime', '-1 month')");
+            base_sql.push_str(" AND created_at >= date('now', 'localtime', '-1 month')");
         }
 
         // Get total count
         let count_sql = format!("SELECT count(*) {}", base_sql);
         let mut count_stmt = conn.prepare(&count_sql)?;
-        let total: i32 = count_stmt.query_row(rusqlite::params_from_iter(query_params.iter()), |row| row.get(0)).unwrap_or(0);
+        let total: i32 = count_stmt
+            .query_row(rusqlite::params_from_iter(query_params.iter()), |row| {
+                row.get(0)
+            })
+            .unwrap_or(0);
 
         // Get items
         let items_sql = format!("SELECT id, total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob, created_at {} ORDER BY created_at DESC LIMIT ? OFFSET ?", base_sql);
@@ -181,23 +230,28 @@ impl Database {
 
         let mut stmt = conn.prepare(&items_sql)?;
         let rows = stmt.query_map(rusqlite::params_from_iter(query_params.iter()), |row| {
-             Ok(TransactionHistoryItem {
-                 id: row.get(0)?,
-                 total_amount: row.get(1)?,
-                 extra_discount: row.get(2)?,
-                 payment_method: row.get(3)?,
-                 billing_mode: row.get(4).unwrap_or("retail".to_string()),
-                 customer_name: row.get(5)?,
-                 customer_phone: row.get(6)?,
-                 customer_dob: row.get(7)?,
-                 created_at: row.get(8)?,
-             })
+            Ok(TransactionHistoryItem {
+                id: row.get(0)?,
+                total_amount: row.get(1)?,
+                extra_discount: row.get(2)?,
+                payment_method: row.get(3)?,
+                billing_mode: row.get(4).unwrap_or("retail".to_string()),
+                customer_name: row.get(5)?,
+                customer_phone: row.get(6)?,
+                customer_dob: row.get(7)?,
+                created_at: row.get(8)?,
+            })
         })?;
 
         let mut transactions = Vec::new();
-        for item in rows { transactions.push(item?); }
-        
-        Ok(TransactionHistoryResponse { transactions, total })
+        for item in rows {
+            transactions.push(item?);
+        }
+
+        Ok(TransactionHistoryResponse {
+            transactions,
+            total,
+        })
     }
 
     pub fn get_transaction_by_id(&self, id: i32) -> Result<Option<TransactionDetails>> {
@@ -219,7 +273,7 @@ impl Database {
         ).optional()?;
 
         if let Some(tx) = tx {
-             let items = conn.prepare("SELECT ti.product_id, ti.quantity, ti.price_at_sale, p.name, p.sku FROM transaction_items ti JOIN products p ON ti.product_id = p.id WHERE ti.transaction_id = ?")?
+            let items = conn.prepare("SELECT ti.product_id, ti.quantity, ti.price_at_sale, p.name, p.sku FROM transaction_items ti JOIN products p ON ti.product_id = p.id WHERE ti.transaction_id = ?")?
                  .query_map([id], |row| {
                      Ok(TransactionItemDetail {
                          product_id: row.get(0)?,
@@ -230,20 +284,23 @@ impl Database {
                      })
                  })?
                  .collect::<Result<Vec<_>>>()?;
-             
-             Ok(Some(TransactionDetails {
-                 meta: tx,
-                 items
-             }))
+
+            Ok(Some(TransactionDetails { meta: tx, items }))
         } else {
-             Ok(None)
+            Ok(None)
         }
     }
 
-    pub fn get_products(&self, page: i32, page_size: i32, search: String, category: String) -> Result<Vec<Product>> {
+    pub fn get_products(
+        &self,
+        page: i32,
+        page_size: i32,
+        search: String,
+        category: String,
+    ) -> Result<Vec<Product>> {
         let conn = self.get_connection()?;
         let offset = (page - 1) * page_size;
-        
+
         let mut sql = "SELECT id, sku, name, price, wholesale_price, stock, category, created_at, cost_price FROM products WHERE 1=1".to_string();
         let mut query_params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
@@ -257,15 +314,15 @@ impl Database {
             sql.push_str(" AND category = ?");
             query_params.push(Box::new(category));
         }
-        
+
         sql.push_str(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
         query_params.push(Box::new(page_size));
         query_params.push(Box::new(offset));
-        
+
         let mut stmt = conn.prepare(&sql)?;
-        
+
         let rows = stmt.query_map(rusqlite::params_from_iter(query_params.iter()), |row| {
-             Ok(Product {
+            Ok(Product {
                 id: row.get(0)?,
                 sku: row.get(1)?,
                 name: row.get(2)?,
@@ -282,7 +339,7 @@ impl Database {
         for product in rows {
             products.push(product?);
         }
-        
+
         Ok(products)
     }
 
@@ -292,27 +349,30 @@ impl Database {
         let mut query_params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if !search.is_empty() {
-             sql.push_str(" AND (name LIKE ? OR sku LIKE ?)");
-             let search_pattern = format!("%{}%", search);
-             query_params.push(Box::new(search_pattern.clone()));
-             query_params.push(Box::new(search_pattern));
+            sql.push_str(" AND (name LIKE ? OR sku LIKE ?)");
+            let search_pattern = format!("%{}%", search);
+            query_params.push(Box::new(search_pattern.clone()));
+            query_params.push(Box::new(search_pattern));
         }
         if category != "all" {
-             sql.push_str(" AND category = ?");
-             query_params.push(Box::new(category));
+            sql.push_str(" AND category = ?");
+            query_params.push(Box::new(category));
         }
-        
+
         let mut stmt = conn.prepare(&sql)?;
-        
-        let count: i32 = stmt.query_row(rusqlite::params_from_iter(query_params.iter()), |row| row.get(0))?;
-        
+
+        let count: i32 = stmt
+            .query_row(rusqlite::params_from_iter(query_params.iter()), |row| {
+                row.get(0)
+            })?;
+
         Ok(count)
     }
 
     pub fn get_product_by_sku(&self, sku: String) -> Result<Option<Product>> {
         let conn = self.get_connection()?;
         let mut stmt = conn.prepare("SELECT id, sku, name, price, wholesale_price, stock, category, created_at, cost_price FROM products WHERE sku = ?")?;
-        
+
         stmt.query_row([sku], |row| {
             Ok(Product {
                 id: row.get(0)?,
@@ -325,7 +385,8 @@ impl Database {
                 created_at: row.get(7)?,
                 cost_price: row.get(8).unwrap_or(0.0),
             })
-        }).optional()
+        })
+        .optional()
     }
 
     pub fn add_product(&self, product: Product) -> Result<i64> {
@@ -348,7 +409,7 @@ impl Database {
                 let id = conn.last_insert_rowid();
                 println!("Product added with ID: {}", id);
                 Ok(id)
-            },
+            }
             Err(e) => {
                 println!("Error adding product: {}", e);
                 Err(e)
@@ -382,12 +443,12 @@ impl Database {
 
     // Transactions
 
-     pub fn create_transaction(&self, data: TransactionData) -> Result<i64> {
+    pub fn create_transaction(&self, data: TransactionData) -> Result<i64> {
         let mut conn = self.get_connection()?;
         let tx = conn.transaction()?;
 
         {
-             tx.execute(
+            tx.execute(
                 "INSERT INTO transactions (total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 params![
                     data.total_amount,
@@ -402,33 +463,63 @@ impl Database {
             let transaction_id = tx.last_insert_rowid();
 
             let mut stmt_item = tx.prepare("INSERT INTO transaction_items (transaction_id, product_id, quantity, price_at_sale) VALUES (?, ?, ?, ?)")?;
-            let mut stmt_stock = tx.prepare("UPDATE products SET stock = stock - ? WHERE id = ?")?;
+            let mut stmt_stock =
+                tx.prepare("UPDATE products SET stock = stock - ? WHERE id = ?")?;
 
             for item in data.items {
-                stmt_item.execute(params![transaction_id, item.product_id, item.quantity, item.price_at_sale])?;
+                stmt_item.execute(params![
+                    transaction_id,
+                    item.product_id,
+                    item.quantity,
+                    item.price_at_sale
+                ])?;
                 stmt_stock.execute(params![item.quantity, item.product_id])?;
             }
-        } 
+        }
 
         tx.commit()?;
-        
+
         let conn = self.get_connection()?;
-        let id: i64 = conn.query_row("SELECT seq FROM sqlite_sequence WHERE name='transactions'", [], |row| row.get(0)).unwrap_or(0);
-        
-        Ok(id) 
+        let id: i64 = conn
+            .query_row(
+                "SELECT seq FROM sqlite_sequence WHERE name='transactions'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        Ok(id)
     }
 
     pub fn get_dashboard_stats(&self) -> Result<DashboardStats> {
         let conn = self.get_connection()?;
-        
+
         let today_sales: f64 = conn.query_row("SELECT COALESCE(SUM(total_amount), 0) FROM transactions WHERE date(created_at) = date('now', 'localtime')", [], |r| r.get(0)).unwrap_or(0.0);
-        let total_sales: f64 = conn.query_row("SELECT COALESCE(SUM(total_amount), 0) FROM transactions", [], |r| r.get(0)).unwrap_or(0.0);
-        let total_transactions: i32 = conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap_or(0);
-        let low_stock_items: i32 = conn.query_row("SELECT count(*) FROM products WHERE stock < 10", [], |r| r.get(0)).unwrap_or(0);
+        let total_sales: f64 = conn
+            .query_row(
+                "SELECT COALESCE(SUM(total_amount), 0) FROM transactions",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(0.0);
+        let total_transactions: i32 = conn
+            .query_row("SELECT count(*) FROM transactions", [], |r| r.get(0))
+            .unwrap_or(0);
+        let low_stock_items: i32 = conn
+            .query_row("SELECT count(*) FROM products WHERE stock < 10", [], |r| {
+                r.get(0)
+            })
+            .unwrap_or(0);
 
         // Profit
         let total_gross_profit: f64 = conn.query_row("SELECT COALESCE(SUM((ti.price_at_sale - COALESCE(p.cost_price, 0)) * ti.quantity), 0) FROM transaction_items ti LEFT JOIN products p ON ti.product_id = p.id", [], |r| r.get(0)).unwrap_or(0.0);
-        let total_discounts: f64 = conn.query_row("SELECT COALESCE(SUM(extra_discount), 0) FROM transactions", [], |r| r.get(0)).unwrap_or(0.0);
+        let total_discounts: f64 = conn
+            .query_row(
+                "SELECT COALESCE(SUM(extra_discount), 0) FROM transactions",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(0.0);
         let total_profit = total_gross_profit - total_discounts;
 
         let today_gross_profit: f64 = conn.query_row("SELECT COALESCE(SUM((ti.price_at_sale - COALESCE(p.cost_price, 0)) * ti.quantity), 0) FROM transaction_items ti LEFT JOIN products p ON ti.product_id = p.id JOIN transactions t ON ti.transaction_id = t.id WHERE date(t.created_at) = date('now', 'localtime')", [], |r| r.get(0)).unwrap_or(0.0);
@@ -451,23 +542,26 @@ impl Database {
             total_transactions,
             today_profit,
             total_profit,
-            chart_data
+            chart_data,
         })
     }
 
     pub fn get_vendor_profiles(&self) -> Result<Vec<VendorProfile>> {
         let conn = self.get_connection()?;
-        let mut stmt = conn.prepare("SELECT id, name, phone, address FROM vendor_profiles ORDER BY name")?;
+        let mut stmt =
+            conn.prepare("SELECT id, name, phone, address FROM vendor_profiles ORDER BY name")?;
         let rows = stmt.query_map([], |row| {
-             Ok(VendorProfile {
-                 id: row.get(0)?,
-                 name: row.get(1)?,
-                 phone: row.get(2)?,
-                 address: row.get(3)?,
-             })
+            Ok(VendorProfile {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                phone: row.get(2)?,
+                address: row.get(3)?,
+            })
         })?;
         let mut profiles = Vec::new();
-        for profile in rows { profiles.push(profile?); }
+        for profile in rows {
+            profiles.push(profile?);
+        }
         Ok(profiles)
     }
 
@@ -480,18 +574,27 @@ impl Database {
         Ok(conn.last_insert_rowid())
     }
 
-    pub fn get_vendors(&self, page: i32, page_size: i32, search: String, date_filter: String, vendor_id: Option<i32>) -> Result<VendorListResponse> {
+    pub fn get_vendors(
+        &self,
+        page: i32,
+        page_size: i32,
+        search: String,
+        date_filter: String,
+        vendor_id: Option<i32>,
+    ) -> Result<VendorListResponse> {
         let conn = self.get_connection()?;
         let offset = (page - 1) * page_size;
-        
-        let mut base_sql = "FROM vendors v LEFT JOIN vendor_profiles vp ON v.vendor_id = vp.id WHERE 1=1".to_string();
+
+        let mut base_sql =
+            "FROM vendors v LEFT JOIN vendor_profiles vp ON v.vendor_id = vp.id WHERE 1=1"
+                .to_string();
         let mut query_params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if !search.is_empty() {
-             base_sql.push_str(" AND (v.vendor_name LIKE ? OR v.notes LIKE ?)");
-             let pattern = format!("%{}%", search);
-             query_params.push(Box::new(pattern.clone()));
-             query_params.push(Box::new(pattern));
+            base_sql.push_str(" AND (v.vendor_name LIKE ? OR v.notes LIKE ?)");
+            let pattern = format!("%{}%", search);
+            query_params.push(Box::new(pattern.clone()));
+            query_params.push(Box::new(pattern));
         }
 
         if let Some(vid) = vendor_id {
@@ -500,17 +603,21 @@ impl Database {
         }
 
         if date_filter == "today" {
-             base_sql.push_str(" AND date(v.date) = date('now', 'localtime')");
+            base_sql.push_str(" AND date(v.date) = date('now', 'localtime')");
         } else if date_filter == "week" {
-             base_sql.push_str(" AND v.date >= date('now', 'localtime', '-7 days')");
+            base_sql.push_str(" AND v.date >= date('now', 'localtime', '-7 days')");
         } else if date_filter == "month" {
-             base_sql.push_str(" AND v.date >= date('now', 'localtime', '-1 month')");
+            base_sql.push_str(" AND v.date >= date('now', 'localtime', '-1 month')");
         }
 
         // Count
         let count_sql = format!("SELECT count(*) {}", base_sql);
         let mut count_stmt = conn.prepare(&count_sql)?;
-        let total: i32 = count_stmt.query_row(rusqlite::params_from_iter(query_params.iter()), |row| row.get(0)).unwrap_or(0);
+        let total: i32 = count_stmt
+            .query_row(rusqlite::params_from_iter(query_params.iter()), |row| {
+                row.get(0)
+            })
+            .unwrap_or(0);
 
         // List - Explicitly select vendor_name from vendors table or fallback to profile
         let list_sql = format!("SELECT v.id, v.vendor_id, COALESCE(v.vendor_name, vp.name), v.date, v.purchase_bill_image, v.purchase_amount, v.payment_bill_image, v.payment_amount, v.total_amount, v.paid_amount, v.pending_amount, v.notes {} ORDER BY v.date DESC LIMIT ? OFFSET ?", base_sql);
@@ -519,25 +626,27 @@ impl Database {
 
         let mut stmt = conn.prepare(&list_sql)?;
         let rows = stmt.query_map(rusqlite::params_from_iter(query_params.iter()), |row| {
-             Ok(VendorRecord {
-                 id: row.get(0)?,
-                 vendor_id: row.get(1)?,
-                 vendor_name: row.get(2)?,
-                 date: row.get(3)?,
-                 purchase_bill_image: row.get(4)?,
-                 purchase_amount: row.get(5)?,
-                 payment_bill_image: row.get(6)?,
-                 payment_amount: row.get(7)?,
-                 total_amount: row.get(8)?,
-                 paid_amount: row.get(9)?,
-                 pending_amount: row.get(10)?,
-                 notes: row.get(11)?,
-             })
+            Ok(VendorRecord {
+                id: row.get(0)?,
+                vendor_id: row.get(1)?,
+                vendor_name: row.get(2)?,
+                date: row.get(3)?,
+                purchase_bill_image: row.get(4)?,
+                purchase_amount: row.get(5)?,
+                payment_bill_image: row.get(6)?,
+                payment_amount: row.get(7)?,
+                total_amount: row.get(8)?,
+                paid_amount: row.get(9)?,
+                pending_amount: row.get(10)?,
+                notes: row.get(11)?,
+            })
         })?;
 
         let mut vendors = Vec::new();
-        for v in rows { vendors.push(v?); }
-        
+        for v in rows {
+            vendors.push(v?);
+        }
+
         Ok(VendorListResponse { vendors, total })
     }
 
@@ -551,21 +660,31 @@ impl Database {
             params.push(Box::new(vid));
         }
 
-        let sql = format!("SELECT 
+        let sql = format!(
+            "SELECT 
             COALESCE(SUM(purchase_amount), 0), 
             COALESCE(SUM(paid_amount), 0), 
             COALESCE(SUM(pending_amount), 0),
             COUNT(*)
-            FROM vendors {}", where_clause);
-        
-        let stats = conn.query_row(&sql, rusqlite::params_from_iter(params.iter()), |row| {
-            Ok(VendorStats {
-                total_purchase: row.get(0)?,
-                total_paid: row.get(1)?,
-                total_pending: row.get(2)?,
-                vendor_count: row.get(3)?,
+            FROM vendors {}",
+            where_clause
+        );
+
+        let stats = conn
+            .query_row(&sql, rusqlite::params_from_iter(params.iter()), |row| {
+                Ok(VendorStats {
+                    total_purchase: row.get(0)?,
+                    total_paid: row.get(1)?,
+                    total_pending: row.get(2)?,
+                    vendor_count: row.get(3)?,
+                })
             })
-        }).unwrap_or(VendorStats { total_purchase: 0.0, total_paid: 0.0, total_pending: 0.0, vendor_count: 0 });
+            .unwrap_or(VendorStats {
+                total_purchase: 0.0,
+                total_paid: 0.0,
+                total_pending: 0.0,
+                vendor_count: 0,
+            });
 
         Ok(stats)
     }
@@ -599,6 +718,375 @@ impl Database {
     pub fn delete_vendor(&self, id: i32) -> Result<()> {
         let conn = self.get_connection()?;
         conn.execute("DELETE FROM vendors WHERE id = ?", [id])?;
+        Ok(())
+    }
+
+    pub fn export_products(&self) -> Result<Vec<Product>> {
+        let conn = self.get_connection()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, sku, name, price, wholesale_price, stock, category, created_at, cost_price
+             FROM products
+             ORDER BY created_at DESC, id DESC",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok(Product {
+                id: row.get(0)?,
+                sku: row.get(1)?,
+                name: row.get(2)?,
+                price: row.get(3)?,
+                wholesale_price: row.get(4).unwrap_or(0.0),
+                stock: row.get(5)?,
+                category: row.get(6)?,
+                created_at: row.get(7)?,
+                cost_price: row.get(8).unwrap_or(0.0),
+            })
+        })?;
+
+        rows.collect()
+    }
+
+    pub fn import_products(&self, products: Vec<Product>) -> Result<usize> {
+        let mut conn = self.get_connection()?;
+        let tx = conn.transaction()?;
+
+        for product in &products {
+            tx.execute(
+                "INSERT INTO products (sku, name, price, wholesale_price, cost_price, stock, category)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(sku) DO UPDATE SET
+                    name=excluded.name,
+                    price=excluded.price,
+                    wholesale_price=excluded.wholesale_price,
+                    cost_price=excluded.cost_price,
+                    stock=excluded.stock,
+                    category=excluded.category",
+                params![
+                    product.sku,
+                    product.name,
+                    product.price,
+                    product.wholesale_price,
+                    product.cost_price,
+                    product.stock,
+                    product.category
+                ],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(products.len())
+    }
+
+    pub fn restore_products_backup(&self, products: Vec<Product>) -> Result<()> {
+        let mut conn = self.get_connection()?;
+        let tx = conn.transaction()?;
+
+        tx.execute("DELETE FROM products", [])?;
+
+        for product in &products {
+            tx.execute(
+                "INSERT INTO products (id, sku, name, price, wholesale_price, stock, category, created_at, cost_price)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)",
+                params![
+                    product.id,
+                    product.sku,
+                    product.name,
+                    product.price,
+                    product.wholesale_price,
+                    product.stock,
+                    product.category,
+                    product.created_at,
+                    product.cost_price
+                ],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn export_transactions_flat(&self) -> Result<Vec<ExportTransactionRow>> {
+        let conn = self.get_connection()?;
+        let mut stmt = conn.prepare(
+            "SELECT
+                t.id,
+                t.created_at,
+                t.payment_method,
+                t.billing_mode,
+                t.total_amount,
+                t.extra_discount,
+                t.customer_name,
+                t.customer_phone,
+                t.customer_dob,
+                p.sku,
+                p.name,
+                ti.quantity,
+                ti.price_at_sale
+             FROM transactions t
+             JOIN transaction_items ti ON ti.transaction_id = t.id
+             LEFT JOIN products p ON p.id = ti.product_id
+             ORDER BY t.created_at DESC, t.id DESC, ti.id ASC",
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok(ExportTransactionRow {
+                id: row.get(0)?,
+                created_at: row.get(1)?,
+                payment_method: row.get(2)?,
+                billing_mode: row.get(3).unwrap_or("retail".to_string()),
+                total_amount: row.get(4)?,
+                extra_discount: row.get(5).unwrap_or(0.0),
+                customer_name: row.get(6)?,
+                customer_phone: row.get(7)?,
+                customer_dob: row.get(8)?,
+                sku: row.get(9).unwrap_or_default(),
+                name: row.get(10).unwrap_or_default(),
+                quantity: row.get(11)?,
+                price_at_sale: row.get(12)?,
+            })
+        })?;
+
+        rows.collect()
+    }
+
+    pub fn export_transaction_backup(&self) -> Result<TransactionBackup> {
+        let conn = self.get_connection()?;
+
+        let mut tx_stmt = conn.prepare(
+            "SELECT id, total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob, created_at
+             FROM transactions
+             ORDER BY id ASC"
+        )?;
+        let transactions = tx_stmt
+            .query_map([], |row| {
+                Ok(BackupTransaction {
+                    id: row.get(0)?,
+                    total_amount: row.get(1)?,
+                    extra_discount: row.get(2).unwrap_or(0.0),
+                    payment_method: row.get(3)?,
+                    billing_mode: row.get(4).unwrap_or("retail".to_string()),
+                    customer_name: row.get(5)?,
+                    customer_phone: row.get(6)?,
+                    customer_dob: row.get(7)?,
+                    created_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        let mut item_stmt = conn.prepare(
+            "SELECT id, transaction_id, product_id, quantity, price_at_sale
+             FROM transaction_items
+             ORDER BY id ASC",
+        )?;
+        let items = item_stmt
+            .query_map([], |row| {
+                Ok(BackupTransactionItem {
+                    id: row.get(0)?,
+                    transaction_id: row.get(1)?,
+                    product_id: row.get(2)?,
+                    quantity: row.get(3)?,
+                    price_at_sale: row.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(TransactionBackup {
+            transactions,
+            items,
+        })
+    }
+
+    pub fn restore_transaction_backup(&self, backup: TransactionBackup) -> Result<()> {
+        let mut conn = self.get_connection()?;
+        let tx = conn.transaction()?;
+
+        tx.execute("DELETE FROM transaction_items", [])?;
+        tx.execute("DELETE FROM transactions", [])?;
+
+        for transaction in &backup.transactions {
+            tx.execute(
+                "INSERT INTO transactions (id, total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                params![
+                    transaction.id,
+                    transaction.total_amount,
+                    transaction.extra_discount,
+                    transaction.payment_method,
+                    transaction.billing_mode,
+                    transaction.customer_name,
+                    transaction.customer_phone,
+                    transaction.customer_dob,
+                    transaction.created_at
+                ],
+            )?;
+        }
+
+        for item in &backup.items {
+            tx.execute(
+                "INSERT INTO transaction_items (id, transaction_id, product_id, quantity, price_at_sale)
+                 VALUES (?, ?, ?, ?, ?)",
+                params![
+                    item.id,
+                    item.transaction_id,
+                    item.product_id,
+                    item.quantity,
+                    item.price_at_sale
+                ],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn clear_transaction_history(&self) -> Result<()> {
+        let conn = self.get_connection()?;
+        conn.execute("DELETE FROM transaction_items", [])?;
+        conn.execute("DELETE FROM transactions", [])?;
+        Ok(())
+    }
+
+    pub fn export_full_backup(&self) -> Result<FullBackup> {
+        let conn = self.get_connection()?;
+        let products = self.export_products()?;
+        let transaction_backup = self.export_transaction_backup()?;
+
+        let mut vendor_profile_stmt =
+            conn.prepare("SELECT id, name, phone, address FROM vendor_profiles ORDER BY id ASC")?;
+        let vendor_profiles = vendor_profile_stmt
+            .query_map([], |row| {
+                Ok(VendorProfile {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    phone: row.get(2)?,
+                    address: row.get(3)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        let mut vendor_stmt = conn.prepare(
+            "SELECT id, vendor_id, vendor_name, date, purchase_bill_image, purchase_amount, payment_bill_image, payment_amount, total_amount, paid_amount, pending_amount, notes
+             FROM vendors
+             ORDER BY id ASC"
+        )?;
+        let vendors = vendor_stmt
+            .query_map([], |row| {
+                Ok(VendorRecord {
+                    id: row.get(0)?,
+                    vendor_id: row.get(1)?,
+                    vendor_name: row.get(2)?,
+                    date: row.get(3)?,
+                    purchase_bill_image: row.get(4)?,
+                    purchase_amount: row.get(5)?,
+                    payment_bill_image: row.get(6)?,
+                    payment_amount: row.get(7)?,
+                    total_amount: row.get(8)?,
+                    paid_amount: row.get(9)?,
+                    pending_amount: row.get(10)?,
+                    notes: row.get(11)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(FullBackup {
+            products,
+            transactions: transaction_backup.transactions,
+            transaction_items: transaction_backup.items,
+            vendor_profiles,
+            vendors,
+        })
+    }
+
+    pub fn restore_full_backup(&self, backup: FullBackup) -> Result<()> {
+        let mut conn = self.get_connection()?;
+        let tx = conn.transaction()?;
+
+        tx.execute("DELETE FROM transaction_items", [])?;
+        tx.execute("DELETE FROM transactions", [])?;
+        tx.execute("DELETE FROM vendors", [])?;
+        tx.execute("DELETE FROM vendor_profiles", [])?;
+        tx.execute("DELETE FROM products", [])?;
+
+        for product in &backup.products {
+            tx.execute(
+                "INSERT INTO products (id, sku, name, price, wholesale_price, stock, category, created_at, cost_price)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)",
+                params![
+                    product.id,
+                    product.sku,
+                    product.name,
+                    product.price,
+                    product.wholesale_price,
+                    product.stock,
+                    product.category,
+                    product.created_at,
+                    product.cost_price
+                ],
+            )?;
+        }
+
+        for profile in &backup.vendor_profiles {
+            tx.execute(
+                "INSERT INTO vendor_profiles (id, name, phone, address)
+                 VALUES (?, ?, ?, ?)",
+                params![profile.id, profile.name, profile.phone, profile.address],
+            )?;
+        }
+
+        for vendor in &backup.vendors {
+            tx.execute(
+                "INSERT INTO vendors (id, vendor_id, vendor_name, date, purchase_bill_image, purchase_amount, payment_bill_image, payment_amount, total_amount, paid_amount, pending_amount, notes)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                params![
+                    vendor.id,
+                    vendor.vendor_id,
+                    vendor.vendor_name,
+                    vendor.date,
+                    vendor.purchase_bill_image,
+                    vendor.purchase_amount,
+                    vendor.payment_bill_image,
+                    vendor.payment_amount,
+                    vendor.total_amount,
+                    vendor.paid_amount,
+                    vendor.pending_amount,
+                    vendor.notes
+                ],
+            )?;
+        }
+
+        for transaction in &backup.transactions {
+            tx.execute(
+                "INSERT INTO transactions (id, total_amount, extra_discount, payment_method, billing_mode, customer_name, customer_phone, customer_dob, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                params![
+                    transaction.id,
+                    transaction.total_amount,
+                    transaction.extra_discount,
+                    transaction.payment_method,
+                    transaction.billing_mode,
+                    transaction.customer_name,
+                    transaction.customer_phone,
+                    transaction.customer_dob,
+                    transaction.created_at
+                ],
+            )?;
+        }
+
+        for item in &backup.transaction_items {
+            tx.execute(
+                "INSERT INTO transaction_items (id, transaction_id, product_id, quantity, price_at_sale)
+                 VALUES (?, ?, ?, ?, ?)",
+                params![
+                    item.id,
+                    item.transaction_id,
+                    item.product_id,
+                    item.quantity,
+                    item.price_at_sale
+                ],
+            )?;
+        }
+
+        tx.commit()?;
         Ok(())
     }
 }
@@ -731,4 +1219,58 @@ pub struct VendorStats {
 pub struct VendorListResponse {
     pub vendors: Vec<VendorRecord>,
     pub total: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportTransactionRow {
+    pub id: i32,
+    pub created_at: String,
+    pub payment_method: String,
+    pub billing_mode: String,
+    pub total_amount: f64,
+    pub extra_discount: f64,
+    pub customer_name: Option<String>,
+    pub customer_phone: Option<String>,
+    pub customer_dob: Option<String>,
+    pub sku: String,
+    pub name: String,
+    pub quantity: i32,
+    pub price_at_sale: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BackupTransaction {
+    pub id: i32,
+    pub total_amount: f64,
+    pub extra_discount: f64,
+    pub payment_method: String,
+    pub billing_mode: String,
+    pub customer_name: Option<String>,
+    pub customer_phone: Option<String>,
+    pub customer_dob: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BackupTransactionItem {
+    pub id: i32,
+    pub transaction_id: i32,
+    pub product_id: i32,
+    pub quantity: i32,
+    pub price_at_sale: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionBackup {
+    pub transactions: Vec<BackupTransaction>,
+    pub items: Vec<BackupTransactionItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FullBackup {
+    pub products: Vec<Product>,
+    pub transactions: Vec<BackupTransaction>,
+    pub transaction_items: Vec<BackupTransactionItem>,
+    pub vendor_profiles: Vec<VendorProfile>,
+    pub vendors: Vec<VendorRecord>,
 }

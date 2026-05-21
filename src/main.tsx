@@ -17,23 +17,12 @@ function Main() {
         // Initial delay for splash effect
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Check license
-        // BYPASS: Automatically set status to active instead of checking license
-        setStatus('active');
-        /* ORIGINAL CODE
         const result = await api.checkLicense(); // This performs online check if needed
         if (result) {
           setStatus('active');
         } else {
-          // Force re-check status just in case
-          const status = await api.getLicenseStatus();
-          if ((status as any).status === 'active') {
-            setStatus('active');
-          } else {
-            setStatus('activation');
-          }
+          setStatus('activation');
         }
-        */
       } catch (e) {
         console.error(e);
         setStatus('activation');

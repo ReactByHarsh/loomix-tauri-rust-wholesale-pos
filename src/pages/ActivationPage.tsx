@@ -13,9 +13,13 @@ export const ActivationPage = ({ onActivated }: ActivationPageProps) => {
 
     const formatKey = (value: string) => {
         const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-        const chunks = cleaned.match(/.{1,4}/g) || [];
-        return chunks.join('-').slice(0, 19);
+        const knownPrefixes = ['LMX', 'ZPT', 'CTX', 'SV', 'UB', 'MB', 'KB', 'SM', 'MA', 'OV'];
+        const prefix = knownPrefixes.find((candidate) => cleaned.startsWith(candidate)) || cleaned.slice(0, 3);
+        const body = cleaned.slice(prefix.length, prefix.length + 12);
+        const chunks = body.match(/.{1,4}/g) || [];
+        return [prefix, ...chunks].filter(Boolean).join('-').slice(0, 18);
     };
+    const isKeyReady = key.replace(/[^A-Z0-9]/gi, '').length >= 14;
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => setKey(formatKey(e.target.value));
 
@@ -42,7 +46,7 @@ export const ActivationPage = ({ onActivated }: ActivationPageProps) => {
     };
 
     const handleActivate = async () => {
-        if (key.length < 19) return;
+        if (!isKeyReady) return;
         setLoading(true); setError(null);
         try {
             const result = await (window as any).api.activateLicense(key);
@@ -103,7 +107,7 @@ export const ActivationPage = ({ onActivated }: ActivationPageProps) => {
                     )}
 
                     {/* Activate Button */}
-                    <button onClick={handleActivate} disabled={loading || key.length < 19}
+                    <button onClick={handleActivate} disabled={loading || !isKeyReady}
                         className="w-full h-11 rounded-lg bg-gradient-to-r from-zinc-600 to-zinc-700 hover:from-zinc-500 hover:to-zinc-600 text-white font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                         {loading ? 'Verifying...' : 'Activate License'}
                     </button>

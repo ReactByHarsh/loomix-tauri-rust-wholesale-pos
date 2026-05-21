@@ -121,9 +121,15 @@ export const api = {
     deleteVendor: (id: number) => invoke('delete_vendor', { id }),
 
     // Export/Import
-    exportProducts: () => invoke('export_products'), // Need implementation
-    exportTransactions: () => invoke('export_transactions'), // Placeholder
+    exportProducts: () => invoke('export_products'),
+    exportTransactions: () => invoke('export_transactions'),
     importProducts: (products: any[]) => invoke('import_products', { products }),
+    restoreProductsBackup: (products: any[]) => invoke('restore_products_backup', { products }),
+    exportTransactionBackup: () => invoke('export_transaction_backup'),
+    restoreTransactionBackup: (backup: any) => invoke('restore_transaction_backup', { backup }),
+    clearTransactionHistory: () => invoke('clear_transaction_history'),
+    exportFullBackup: () => invoke('export_full_backup'),
+    restoreFullBackup: (backup: any) => invoke('restore_full_backup', { backup }),
 };
 
 // Global assignment

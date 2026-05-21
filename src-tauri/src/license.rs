@@ -1,22 +1,31 @@
+use chrono::{DateTime, Utc};
+use machine_uid;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::AppHandle;
 use tauri::Manager;
-use machine_uid;
-// use reqwest::blocking::Client;
-// use chrono::prelude::*;
 
-const LICENSE_API_URL: &str = "https://electron-licensing-server.vercel.app/api/verify";
+const LICENSE_API_URL: &str = match option_env!("LICENSE_API_URL") {
+    Some(url) => url,
+    None => "https://electron-licensing-server.vercel.app/api/verify",
+};
 const SOFTWARE_TYPE: &str = "Loomix";
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(8);
+const CLOCK_ROLLBACK_GRACE_MS: u64 = 60 * 60 * 1000;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct LicenseData {
     pub key: Option<String>,
-    pub status: String, // "active", "invalid", "expired"
+    pub status: String,
     pub last_check: u64,
     pub expiry: Option<u64>,
     pub last_known_date: u64,
+    pub client_name: Option<String>,
+    pub software_type: Option<String>,
+    pub plan_type: Option<String>,
 }
 
 impl Default for LicenseData {
@@ -27,8 +36,31 @@ impl Default for LicenseData {
             last_check: 0,
             expiry: None,
             last_known_date: 0,
+            client_name: None,
+            software_type: None,
+            plan_type: None,
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct VerifyResponse {
+    valid: bool,
+    expiry: Option<String>,
+    license: Option<RemoteLicense>,
+    message: Option<String>,
+    error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoteLicense {
+    client_name: Option<String>,
+    software_type: String,
+    plan_type: Option<String>,
+    status: String,
+    expires_at: String,
 }
 
 pub struct LicenseManager {
@@ -38,16 +70,15 @@ pub struct LicenseManager {
 
 impl LicenseManager {
     pub fn new(app_handle: &AppHandle) -> Self {
-        let app_dir = app_handle.path().app_data_dir().expect("failed to get app data dir");
-        std::fs::create_dir_all(&app_dir).unwrap();
+        let app_dir = app_handle
+            .path()
+            .app_data_dir()
+            .expect("failed to get app data dir");
+        std::fs::create_dir_all(&app_dir).expect("failed to create app data dir");
         let path = app_dir.join("license-data.json");
-        
-        let machine_id = machine_uid::get().unwrap_or("unknown".to_string());
-        
-        LicenseManager {
-            path,
-            machine_id,
-        }
+        let machine_id = machine_uid::get().unwrap_or_else(|_| "unknown".to_string());
+
+        LicenseManager { path, machine_id }
     }
 
     fn load(&self) -> LicenseData {
@@ -69,12 +100,36 @@ impl LicenseManager {
         self.load()
     }
 
+    fn now_millis() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64
+    }
+
+    fn parse_time_millis(value: &str) -> Option<u64> {
+        DateTime::parse_from_rfc3339(value)
+            .ok()
+            .map(|dt| dt.with_timezone(&Utc).timestamp_millis().max(0) as u64)
+    }
+
+    fn normalize_key(key: &str) -> String {
+        key.trim().to_ascii_uppercase()
+    }
+
+    fn mark_invalid(&self, status: &str) {
+        let mut data = self.load();
+        data.status = status.to_string();
+        self.save(&data);
+    }
+
     pub fn check_tampering(&self) -> bool {
         let mut data = self.load();
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
+        let now = Self::now_millis();
 
-        // 1 hour buffer
-        if now < data.last_known_date.saturating_sub(60 * 60 * 1000) {
+        if data.last_known_date > 0
+            && now < data.last_known_date.saturating_sub(CLOCK_ROLLBACK_GRACE_MS)
+        {
             data.status = "invalid".to_string();
             self.save(&data);
             return true;
@@ -86,45 +141,89 @@ impl LicenseManager {
         }
         false
     }
-    
-    pub async fn activate(&self, key: String) -> Result<String, String> {
-        let client = reqwest::Client::new();
+
+    fn persist_success(&self, key: String, response: VerifyResponse) -> Result<(), String> {
+        let license = response.license.ok_or("Malformed license response")?;
+        if !response.valid || license.status != "active" {
+            return Err(response
+                .message
+                .unwrap_or_else(|| "License is not active".to_string()));
+        }
+        if license.software_type != SOFTWARE_TYPE {
+            return Err(format!(
+                "License is for {}, not {}",
+                license.software_type, SOFTWARE_TYPE
+            ));
+        }
+
+        let expiry = response
+            .expiry
+            .as_deref()
+            .and_then(Self::parse_time_millis)
+            .or_else(|| Self::parse_time_millis(&license.expires_at));
+        let now = Self::now_millis();
+        if let Some(expires_at) = expiry {
+            if expires_at <= now {
+                self.mark_invalid("expired");
+                return Err("License expired".to_string());
+            }
+        }
+
+        let data = LicenseData {
+            key: Some(key),
+            status: "active".to_string(),
+            last_check: now,
+            expiry,
+            last_known_date: now,
+            client_name: license.client_name,
+            software_type: Some(license.software_type),
+            plan_type: license.plan_type,
+        };
+        self.save(&data);
+        Ok(())
+    }
+
+    async fn verify_remote(&self, key: &str) -> Result<VerifyResponse, String> {
+        if self.machine_id == "unknown" {
+            return Err("Unable to read this device ID for license binding".to_string());
+        }
+
+        let client = reqwest::Client::builder()
+            .timeout(REQUEST_TIMEOUT)
+            .build()
+            .map_err(|e| e.to_string())?;
         let body = serde_json::json!({
             "licenseKey": key,
             "machineId": self.machine_id,
             "softwareType": SOFTWARE_TYPE
         });
 
-        match client.post(LICENSE_API_URL).json(&body).send().await {
-            Ok(resp) => {
-                 if resp.status().is_success() {
-                     let json: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-                     if json["valid"].as_bool().unwrap_or(false) {
-                         let expiry_str = json["expiry"].as_str();
-                         let expiry = if let Some(_s) = expiry_str {
-                             None 
-                         } else {
-                             None
-                         };
-                         
-                         let mut data = self.load();
-                         data.key = Some(key);
-                         data.status = "active".to_string();
-                         data.last_check = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
-                         data.expiry = expiry;
-                         data.last_known_date = data.last_check;
-                         self.save(&data);
-                         
-                         Ok("Activation successful".to_string())
-                     } else {
-                         Ok(json["message"].as_str().unwrap_or("Invalid key").to_string())
-                     }
-                 } else {
-                     Err(format!("Server error: {}", resp.status()))
-                 }
-            },
-            Err(e) => Err(format!("Network error: {}", e))
+        let response = client
+            .post(LICENSE_API_URL)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Could not reach licensing server: {}", e))?;
+        let status = response.status();
+        let text = response.text().await.map_err(|e| e.to_string())?;
+        let parsed: VerifyResponse = serde_json::from_str(&text)
+            .map_err(|_| format!("Unexpected licensing server response ({})", status))?;
+
+        if !status.is_success() {
+            return Err(parsed
+                .error
+                .or(parsed.message)
+                .unwrap_or_else(|| format!("License rejected by server ({})", status)));
         }
+
+        Ok(parsed)
+    }
+
+    pub async fn activate(&self, key: String) -> Result<String, String> {
+        let normalized_key = Self::normalize_key(&key);
+        let response = self.verify_remote(&normalized_key).await?;
+        self.persist_success(normalized_key, response)?;
+        Ok("Activation successful".to_string())
     }
 
     pub async fn check_license(&self) -> bool {
@@ -133,37 +232,20 @@ impl LicenseManager {
         }
 
         let data = self.load();
-        if data.key.is_none() {
+        let Some(key) = data.key else {
             return false;
-        }
+        };
 
-        // Online check
-        let client = reqwest::Client::new();
-        let body = serde_json::json!({
-            "licenseKey": data.key.unwrap(),
-            "machineId": self.machine_id,
-            "softwareType": SOFTWARE_TYPE
-        });
-
-        match client.post(LICENSE_API_URL).json(&body).timeout(std::time::Duration::from_secs(3)).send().await {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    let json: serde_json::Value = resp.json().await.unwrap_or(serde_json::Value::Null);
-                    if json["valid"].as_bool().unwrap_or(false) {
-                         let mut new_data = self.load();
-                         new_data.status = "active".to_string();
-                         new_data.last_check = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
-                         new_data.last_known_date = new_data.last_check;
-                         self.save(&new_data);
-                         return true;
-                    }
-                }
-            },
-            Err(_) => {
-                // Network fail
+        if let Some(expiry) = data.expiry {
+            if expiry <= Self::now_millis() {
+                self.mark_invalid("expired");
+                return false;
             }
         }
-        
-        false 
+
+        match self.verify_remote(&key).await {
+            Ok(response) => self.persist_success(key, response).is_ok(),
+            Err(_) => false,
+        }
     }
 }
