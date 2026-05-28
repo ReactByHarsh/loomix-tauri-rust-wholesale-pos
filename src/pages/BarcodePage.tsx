@@ -1,34 +1,43 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Barcode, Check, Copy, Download, History, Printer, RefreshCw, Square, Store, Tag, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Barcode, Check, Package, Printer, Save, Search, Trash2 } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
+import { useLocation } from 'react-router-dom';
 import { getCurrencySymbol, useSettingsStore } from '../store/useSettingsStore';
-import { generateBarcodeBatchHTML, generateBarcodeLabelHTML } from '../utils/barcodeTemplate';
+import { generateBarcodeBatchHTML } from '../utils/barcodeTemplate';
+import type { Product } from '../types';
 import { useI18n } from '../i18n';
 
-function cn(...classes: (string | undefined | null | false)[]) { return classes.filter(Boolean).join(' '); }
-
-type BarcodeFormat = 'CODE128' | 'EAN13' | 'EAN8' | 'UPC' | 'CODE39';
+type WindowWithApi = Window & {
+    api?: {
+        getProducts?: (args: { page: number; pageSize: number; search: string; category: string }) => Promise<{ products?: Product[] }>;
+        printBarcode?: (html: string, printerName?: string) => Promise<{ success?: boolean; error?: string }>;
+    };
+};
 
 interface SavedBarcode {
     id: string;
-    barcodeValue: string;
-    format: BarcodeFormat;
-    price: number;
+    sku: string;
+    title: string;
+    priceOption: 'retail' | 'wholesale';
+    printedPrice: number;
     quantity: number;
+    storeLabelName: string;
+    showStoreName: boolean;
+    showTitle: boolean;
     createdAt: string;
 }
 
-const STORAGE_KEY = 'loomix-barcode-history';
+const STORAGE_KEY = 'loomix-barcode-printing-tray';
 const MAX_SAVED_BARCODES = 100;
 
-function createBarcodeSvgMarkup(barcodeValue: string, format: BarcodeFormat) {
+function createBarcodeSvgMarkup(barcodeValue: string) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     JsBarcode(svg, barcodeValue, {
-        format,
-        width: 2,
-        height: 48,
+        format: 'CODE128',
+        width: 1.7,
+        height: 38,
         displayValue: true,
-        fontSize: 12,
+        fontSize: 11,
         margin: 0,
         background: '#ffffff',
         lineColor: '#000000',
@@ -36,67 +45,118 @@ function createBarcodeSvgMarkup(barcodeValue: string, format: BarcodeFormat) {
     return new XMLSerializer().serializeToString(svg);
 }
 
-function formatSavedTime(value: string) {
-    const date = new Date(value);
-    return date.toLocaleString([], {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+function formatDate(value: string) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'Saved';
+    return parsed.toLocaleDateString(undefined, { month: 'short', day: '2-digit' });
 }
 
-function SavedBarcodePreview({ barcodeValue, format }: { barcodeValue: string; format: BarcodeFormat; }) {
+function LiveBarcodePreview({
+    sku,
+    title,
+    printedPrice,
+    storeLabelName,
+    showStoreName,
+    showTitle,
+    priceOption,
+    emptyLabel,
+    retailLabel,
+    wholesaleLabel,
+}: {
+    sku: string;
+    title: string;
+    printedPrice: string;
+    storeLabelName: string;
+    showStoreName: boolean;
+    showTitle: boolean;
+    priceOption: 'retail' | 'wholesale';
+    emptyLabel: string;
+    retailLabel: string;
+    wholesaleLabel: string;
+}) {
     const svgRef = useRef<SVGSVGElement>(null);
 
     useEffect(() => {
-        if (!svgRef.current) return;
+        if (!svgRef.current || !sku) return;
         try {
-            JsBarcode(svgRef.current, barcodeValue, {
-                format,
-                width: 1.4,
-                height: 26,
-                displayValue: false,
+            JsBarcode(svgRef.current, sku, {
+                format: 'CODE128',
+                width: 1.55,
+                height: 34,
+                displayValue: true,
+                fontSize: 10,
                 margin: 0,
                 background: '#ffffff',
-                lineColor: '#111827',
+                lineColor: '#000000',
             });
         } catch {
             svgRef.current.innerHTML = '';
         }
-    }, [barcodeValue, format]);
+    }, [sku]);
 
-    return <svg ref={svgRef} className="h-8 w-full"></svg>;
+    if (!sku) {
+        return (
+            <div className="flex h-28 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white text-slate-400 dark:border-zinc-700 dark:bg-zinc-950">
+                <Barcode size={24} className="opacity-40" />
+                <p className="mt-2 text-xs font-semibold">{emptyLabel}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="mx-auto flex min-h-[118px] w-full max-w-[220px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-black shadow-sm">
+            {showStoreName && storeLabelName ? (
+                <div className="mb-0.5 max-w-full truncate text-center text-[9px] font-black uppercase tracking-wider">
+                    {storeLabelName}
+                </div>
+            ) : null}
+            {showTitle && title ? (
+                <div className="mb-1 max-w-full truncate text-center text-[10px] font-semibold">{title}</div>
+            ) : null}
+            <svg ref={svgRef} className="max-w-full" />
+            <div className="mt-1 text-center text-[10px] font-black">
+                {priceOption === 'retail' ? retailLabel : wholesaleLabel}: {printedPrice}
+            </div>
+        </div>
+    );
 }
 
 export function BarcodePage() {
     const { storeName, barcodePrinter, currency } = useSettingsStore();
     const { t } = useI18n();
     const currencySymbol = getCurrencySymbol(currency);
-    const [barcodeValue, setBarcodeValue] = useState('');
-    const [format, setFormat] = useState<BarcodeFormat>('CODE128');
-    const [price, setPrice] = useState('0');
-    const [quantity, setQuantity] = useState('1');
-    const [error, setError] = useState('');
-    const [copied, setCopied] = useState(false);
-    const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'done'>('idle');
-    const [savedBarcodes, setSavedBarcodes] = useState<SavedBarcode[]>([]);
-    const [selectedSavedIds, setSelectedSavedIds] = useState<string[]>([]);
-    const [savedMessage, setSavedMessage] = useState<'idle' | 'saved'>('idle');
-    const [bulkPrintStatus, setBulkPrintStatus] = useState<'idle' | 'printing' | 'done'>('idle');
-    const svgRef = useRef<SVGSVGElement>(null);
+    const location = useLocation();
 
-    const totalCopies = useMemo(() => Math.max(1, parseInt(quantity || '1', 10) || 1), [quantity]);
-    const parsedPrice = useMemo(() => Math.max(0, parseFloat(price || '0') || 0), [price]);
+    const [sku, setSku] = useState('');
+    const [title, setTitle] = useState('');
+    const [priceOption, setPriceOption] = useState<'retail' | 'wholesale'>('retail');
+    const [printedPrice, setPrintedPrice] = useState(0);
+    const [quantity, setQuantity] = useState(10);
+    const [storeLabelName, setStoreLabelName] = useState(storeName || 'My Store');
+    const [showStoreName, setShowStoreName] = useState(true);
+    const [showTitle, setShowTitle] = useState(true);
+
+    const [error, setError] = useState('');
+    const [status, setStatus] = useState('');
+    const [savedBarcodes, setSavedBarcodes] = useState<SavedBarcode[]>([]);
+    const [printing, setPrinting] = useState(false);
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Product[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+    useEffect(() => {
+        const stateProd = location.state?.product as Product | undefined;
+        if (stateProd) selectProduct(stateProd);
+    }, [location.state]);
 
     useEffect(() => {
         try {
             const raw = window.localStorage.getItem(STORAGE_KEY);
             if (!raw) return;
             const parsed = JSON.parse(raw) as SavedBarcode[];
-            if (Array.isArray(parsed)) {
-                setSavedBarcodes(parsed.slice(0, MAX_SAVED_BARCODES));
-            }
+            if (Array.isArray(parsed)) setSavedBarcodes(parsed.slice(0, MAX_SAVED_BARCODES));
         } catch {
             setSavedBarcodes([]);
         }
@@ -106,410 +166,365 @@ export function BarcodePage() {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedBarcodes.slice(0, MAX_SAVED_BARCODES)));
     }, [savedBarcodes]);
 
-    useEffect(() => {
-        if (!barcodeValue || !svgRef.current) { setError(''); return; }
+    const selectProduct = (product: Product) => {
+        setSku(product.sku);
+        setTitle(product.name);
+        setPriceOption('retail');
+        setPrintedPrice(product.price);
+        setQuantity(10);
+        setSearchQuery('');
+        setShowSearchDropdown(false);
+        setError('');
+    };
+
+    const loadSavedBarcode = (item: SavedBarcode) => {
+        setSku(item.sku);
+        setTitle(item.title);
+        setPriceOption(item.priceOption);
+        setPrintedPrice(item.printedPrice);
+        setQuantity(item.quantity);
+        setStoreLabelName(item.storeLabelName);
+        setShowStoreName(item.showStoreName);
+        setShowTitle(item.showTitle);
+        setError('');
+        setStatus(t('barcode.loadedMockup'));
+        window.setTimeout(() => setStatus(''), 1200);
+    };
+
+    const handleSearch = async (query: string) => {
+        setSearchQuery(query);
+        if (query.length < 2) {
+            setSearchResults([]);
+            setShowSearchDropdown(false);
+            return;
+        }
+
+        setIsSearching(true);
+        setShowSearchDropdown(true);
         try {
-            JsBarcode(svgRef.current, barcodeValue, { format, width: 2, height: 48, displayValue: true, fontSize: 12, margin: 0, background: '#ffffff', lineColor: '#000000' });
-            setError('');
-        } catch (e: any) { setError(t('barcode.invalid', { message: e.message || 'Check format and value' })); }
-    }, [barcodeValue, format, t]);
-
-    const formatHints: Record<BarcodeFormat, string> = {
-        CODE128: t('barcode.hint.code128'),
-        EAN13: t('barcode.hint.ean13'),
-        EAN8: t('barcode.hint.ean8'),
-        UPC: t('barcode.hint.upc'),
-        CODE39: t('barcode.hint.code39'),
-    };
-
-    const canUseCurrentBarcode = Boolean(barcodeValue.trim()) && !error;
-    const allSelected = savedBarcodes.length > 0 && selectedSavedIds.length === savedBarcodes.length;
-    const selectedBarcodes = savedBarcodes.filter((item) => selectedSavedIds.includes(item.id));
-
-    const getCurrentSavedBarcode = (): SavedBarcode | null => {
-        if (!canUseCurrentBarcode) return null;
-        return {
-            id: `${format}:${barcodeValue.trim()}`,
-            barcodeValue: barcodeValue.trim(),
-            format,
-            price: parsedPrice,
-            quantity: totalCopies,
-            createdAt: new Date().toISOString(),
-        };
-    };
-
-    const saveBarcode = (entry: SavedBarcode) => {
-        setSavedBarcodes((current) => {
-            const next = [entry, ...current.filter((item) => item.id !== entry.id)];
-            return next.slice(0, MAX_SAVED_BARCODES);
-        });
-        setSavedMessage('saved');
-        window.setTimeout(() => setSavedMessage('idle'), 1500);
-    };
-
-    const handleSaveCurrent = () => {
-        const entry = getCurrentSavedBarcode();
-        if (!entry) return;
-        saveBarcode(entry);
-    };
-
-    const printHtml = async (html: string, mode: 'single' | 'bulk') => {
-        if (mode === 'single') setPrintStatus('printing');
-        if (mode === 'bulk') setBulkPrintStatus('printing');
-
-        try {
-            // @ts-ignore
-            const result = await window.api?.printBarcode?.(html, barcodePrinter || undefined);
-            if (!result || result.success) {
-                if (mode === 'single') {
-                    setPrintStatus('done');
-                    window.setTimeout(() => setPrintStatus('idle'), 1800);
-                } else {
-                    setBulkPrintStatus('done');
-                    window.setTimeout(() => setBulkPrintStatus('idle'), 1800);
-                }
-                return;
-            }
-
-            if (mode === 'single') setPrintStatus('idle');
-            if (mode === 'bulk') setBulkPrintStatus('idle');
-            alert(result.error || 'Unable to print barcode labels.');
+            const response = await (window as WindowWithApi).api?.getProducts?.({ page: 1, pageSize: 10, search: query, category: 'all' });
+            setSearchResults(response?.products || []);
         } catch {
-            if (mode === 'single') setPrintStatus('idle');
-            if (mode === 'bulk') setBulkPrintStatus('idle');
-            alert('Unable to print barcode labels.');
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
         }
     };
 
-    const buildSavedBarcodeHtml = (items: SavedBarcode[]) => {
-        const labels = items.map((item) => ({
-            storeName: storeName || 'Store',
-            barcodeValue: item.barcodeValue,
-            svgMarkup: createBarcodeSvgMarkup(item.barcodeValue, item.format),
-            price: item.price,
-            quantity: item.quantity,
-            currencySymbol,
-        }));
-        return generateBarcodeBatchHTML(labels);
-    };
+    const saveCurrentBarcode = () => {
+        if (!sku.trim()) {
+            setError(t('barcode.skuRequiredSave'));
+            return;
+        }
 
-    const handleDownload = () => {
-        if (!svgRef.current || error) return;
-        const current = getCurrentSavedBarcode();
-        if (current) saveBarcode(current);
+        const item: SavedBarcode = {
+            id: `${Date.now()}-${sku}`,
+            sku: sku.trim(),
+            title: title.trim(),
+            priceOption,
+            printedPrice: Number(printedPrice) || 0,
+            quantity: Math.max(1, Number(quantity) || 1),
+            storeLabelName: storeLabelName.trim() || 'Store',
+            showStoreName,
+            showTitle,
+            createdAt: new Date().toISOString(),
+        };
 
-        const svgData = new XMLSerializer().serializeToString(svgRef.current);
-        const blob = new Blob([svgData], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `barcode_${barcodeValue}.svg`;
-        link.click();
-        URL.revokeObjectURL(url);
-    };
-
-    const handleCopy = async () => {
-        if (!barcodeValue) return;
-        await navigator.clipboard.writeText(barcodeValue);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-    };
-
-    const handlePrint = async () => {
-        if (!barcodeValue || !svgRef.current || error) return;
-        const current = getCurrentSavedBarcode();
-        if (current) saveBarcode(current);
-        const svgMarkup = new XMLSerializer().serializeToString(svgRef.current);
-        const html = generateBarcodeLabelHTML({
-            storeName: storeName || 'Store',
-            barcodeValue,
-            svgMarkup,
-            price: parsedPrice,
-            quantity: totalCopies,
-            currencySymbol,
-        });
-        await printHtml(html, 'single');
-    };
-
-    const handleQuickPrintSaved = async (item: SavedBarcode) => {
-        const html = buildSavedBarcodeHtml([item]);
-        await printHtml(html, 'bulk');
-    };
-
-    const handlePrintSelected = async () => {
-        if (selectedBarcodes.length === 0) return;
-        const html = buildSavedBarcodeHtml(selectedBarcodes);
-        await printHtml(html, 'bulk');
-    };
-
-    const handleLoadSaved = (item: SavedBarcode) => {
-        setBarcodeValue(item.barcodeValue);
-        setFormat(item.format);
-        setPrice(item.price.toString());
-        setQuantity(item.quantity.toString());
-    };
-
-    const toggleSelected = (id: string) => {
-        setSelectedSavedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-    };
-
-    const toggleSelectAll = () => {
-        setSelectedSavedIds(allSelected ? [] : savedBarcodes.map((item) => item.id));
-    };
-
-    const clearSavedBarcodes = () => {
-        setSavedBarcodes([]);
-        setSelectedSavedIds([]);
+        setSavedBarcodes((previous) => [item, ...previous.filter((saved) => saved.sku !== item.sku)].slice(0, MAX_SAVED_BARCODES));
+        setError('');
+        setStatus(
+            t('barcode.savedStatus', {
+                count: Math.min(savedBarcodes.length + 1, MAX_SAVED_BARCODES),
+                limit: MAX_SAVED_BARCODES,
+            })
+        );
+        window.setTimeout(() => setStatus(''), 1600);
     };
 
     const removeSavedBarcode = (id: string) => {
-        setSavedBarcodes((current) => current.filter((item) => item.id !== id));
-        setSelectedSavedIds((current) => current.filter((item) => item !== id));
+        setSavedBarcodes((previous) => previous.filter((item) => item.id !== id));
+    };
+
+    const printCurrentBarcode = async () => {
+        if (!sku.trim()) {
+            setError(t('barcode.skuRequiredPrint'));
+            return;
+        }
+
+        setPrinting(true);
+        setError('');
+
+        const html = generateBarcodeBatchHTML([
+            {
+                storeName: showStoreName ? storeLabelName : '',
+                title: showTitle ? title : '',
+                barcodeValue: sku.trim(),
+                svgMarkup: createBarcodeSvgMarkup(sku.trim()),
+                price: Number(printedPrice) || 0,
+                priceLabel: `${priceOption === 'retail' ? t('barcode.retail') : t('barcode.wholesale')}: ${currencySymbol}${Number(printedPrice || 0).toFixed(2)}`,
+                quantity: Math.max(1, Number(quantity) || 1),
+                currencySymbol,
+            },
+        ]);
+
+        try {
+            const result = await (window as WindowWithApi).api?.printBarcode?.(html, barcodePrinter || undefined);
+            if (result?.success === false) {
+                setError(result.error || t('barcode.printFailed'));
+            } else {
+                setStatus(t('barcode.printDialogOpened'));
+                window.setTimeout(() => setStatus(''), 1400);
+            }
+        } catch {
+            setError(t('barcode.printFailed'));
+        } finally {
+            setPrinting(false);
+        }
     };
 
     return (
-        <div className="h-full overflow-y-auto bg-slate-50 dark:bg-zinc-950">
-            <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-slate-900 p-2 text-white dark:bg-white dark:text-zinc-900">
-                            <Barcode size={20} />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t('barcode.title')}</h1>
-                            <p className="text-xs text-slate-500 dark:text-zinc-400">{t('barcode.subtitle')}</p>
-                        </div>
+        <div className="flex h-full min-h-0 flex-col overflow-hidden overscroll-contain bg-slate-50 dark:bg-zinc-950/50">
+            <div className="mx-auto flex h-full min-h-0 w-full max-w-[1900px] flex-col p-4">
+            <div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-slate-950 p-2 text-white shadow-sm dark:bg-white dark:text-zinc-950">
+                        <Barcode size={21} />
                     </div>
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800">
-                        <Store size={12} className="text-slate-400" />
-                        <span className="font-medium text-slate-700 dark:text-zinc-200">{storeName || 'Add in Settings'}</span>
+                    <div>
+                        <h1 className="text-lg font-black text-slate-900 dark:text-white">{t('barcode.title')}</h1>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400">{t('barcode.subtitle')}</p>
                     </div>
                 </div>
-
-                <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('barcode.createLabel')}</h2>
-                            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">{formatHints[format]}</span>
-                        </div>
-
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                            <div className="md:col-span-2">
-                                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-zinc-400">{t('barcode.barcodeValue')}</label>
-                                <div className="relative">
-                                    <input type="text" value={barcodeValue} onChange={(e) => setBarcodeValue(e.target.value)} placeholder={t('barcode.enterCode')}
-                                        className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 pr-10 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" />
-                                    <button onClick={handleCopy} disabled={!barcodeValue} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40 dark:hover:bg-zinc-800">
-                                        {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-zinc-400">{t('barcode.format')}</label>
-                                <select value={format} onChange={(e) => setFormat(e.target.value as BarcodeFormat)}
-                                    className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                                    <option value="CODE128">CODE 128</option>
-                                    <option value="EAN13">EAN-13</option>
-                                    <option value="EAN8">EAN-8</option>
-                                    <option value="UPC">UPC</option>
-                                    <option value="CODE39">CODE 39</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-zinc-400">{t('common.price')}</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">{currencySymbol}</span>
-                                    <input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)}
-                                        className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-zinc-400">{t('common.copies')}</label>
-                                <input type="number" min="1" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)}
-                                    className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" />
-                            </div>
-
-                            <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950/60">
-                                <Tag size={14} className="text-slate-400" />
-                                <span className="text-xs text-slate-600 dark:text-zinc-300">{t('barcode.copiesSummary', { price: `${currencySymbol} ${parsedPrice.toFixed(2)}`, count: totalCopies, copies: totalCopies > 1 ? 'copies' : 'copy' })}</span>
-                            </div>
-                        </div>
-
-                        {error && (
-                            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            <button onClick={() => { setBarcodeValue(''); setPrice('0'); setQuantity('1'); }}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                                <RefreshCw size={13} /> {t('common.clear')}
-                            </button>
-                            <button onClick={handleSaveCurrent} disabled={!canUseCurrentBarcode}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                                <History size={13} /> {savedMessage === 'saved' ? 'Saved' : 'Save to Recent'}
-                            </button>
-                            <button onClick={handleDownload} disabled={!barcodeValue || !!error}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                                <Download size={13} /> {t('barcode.downloadSvg')}
-                            </button>
-                            <button onClick={handlePrint} disabled={!barcodeValue || !!error}
-                                className={cn('inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white transition',
-                                    !barcodeValue || !!error ? 'cursor-not-allowed bg-slate-300 dark:bg-zinc-700' : 'bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100')}
-                            >
-                                {printStatus === 'printing' ? t('barcode.printing') : printStatus === 'done' ? t('barcode.printed') : t('barcode.printLabels')}
-                                <Printer size={13} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                        <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('barcode.livePreview')}</h2>
-                        <p className="text-xs text-slate-500 dark:text-zinc-400">{t('barcode.previewHint')}</p>
-
-                        <div className="mt-4 flex items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 dark:border-zinc-700 dark:bg-zinc-950">
-                            <div className="w-full max-w-[260px] rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-white">
-                                {barcodeValue ? (
-                                    error ? (
-                                        <div className="text-center text-xs font-medium text-red-500">{error}</div>
-                                    ) : (
-                                        <div className="w-full">
-                                            <div className="text-center text-[10px] font-bold uppercase tracking-wider text-black">{storeName || 'Store Name'}</div>
-                                            <div className="mt-1 flex justify-center">
-                                                <svg ref={svgRef}></svg>
-                                            </div>
-                                            <div className="mt-1 text-center text-[10px] font-bold text-black">{currencySymbol} {parsedPrice.toFixed(2)}</div>
-                                        </div>
-                                    )
-                                ) : (
-                                    <div className="py-8 text-center text-slate-400">
-                                        <Barcode size={32} className="mx-auto opacity-40" />
-                                        <p className="mt-2 text-xs font-medium">{t('barcode.enterPreview')}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                            <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950/60">
-                                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Copies</p>
-                                <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{totalCopies}</p>
-                            </div>
-                            <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950/60">
-                                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Price</p>
-                                <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{currencySymbol} {parsedPrice.toFixed(2)}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <History size={16} className="text-slate-600 dark:text-zinc-300" />
-                                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Saved Barcodes</h2>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">The latest 100 barcode labels are saved here for quick reprint and reuse.</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:bg-zinc-800 dark:text-zinc-300">
-                                {selectedSavedIds.length} selected
-                            </span>
-                            <button
-                                onClick={toggleSelectAll}
-                                disabled={savedBarcodes.length === 0}
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                            >
-                                {allSelected ? 'Unselect All' : 'Select All'}
-                            </button>
-                            <button
-                                onClick={handlePrintSelected}
-                                disabled={selectedBarcodes.length === 0}
-                                className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
-                            >
-                                {bulkPrintStatus === 'printing' ? 'Printing...' : bulkPrintStatus === 'done' ? 'Printed' : 'Print Selected'}
-                            </button>
-                            <button
-                                onClick={clearSavedBarcodes}
-                                disabled={savedBarcodes.length === 0}
-                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-40 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300"
-                            >
-                                Clear Saved
-                            </button>
-                        </div>
-                    </div>
-
-                    {savedBarcodes.length === 0 ? (
-                        <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center dark:border-zinc-700 dark:bg-zinc-950/60">
-                            <Barcode size={28} className="mx-auto text-slate-300 dark:text-zinc-600" />
-                            <p className="mt-2 text-sm font-medium text-slate-600 dark:text-zinc-300">No saved barcodes yet</p>
-                            <p className="mt-1 text-xs text-slate-400 dark:text-zinc-500">Save or print a barcode once and it will appear here.</p>
-                        </div>
-                    ) : (
-                        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                            {savedBarcodes.map((item) => {
-                                const isSelected = selectedSavedIds.includes(item.id);
-                                return (
-                                    <div key={item.id} className={cn(
-                                        'rounded-xl border p-3 transition',
-                                        isSelected
-                                            ? 'border-slate-900 bg-slate-50 dark:border-white dark:bg-zinc-950'
-                                            : 'border-slate-200 bg-white dark:border-zinc-700 dark:bg-zinc-950/50'
-                                    )}>
-                                        <div className="flex items-start justify-between gap-3">
-                                            <button
-                                                onClick={() => toggleSelected(item.id)}
-                                                className="mt-0.5 text-slate-500 transition hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-100"
-                                            >
-                                                {isSelected ? <Check size={16} /> : <Square size={16} />}
-                                            </button>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="truncate font-mono text-sm font-bold text-slate-900 dark:text-white">{item.barcodeValue}</p>
-                                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-zinc-800 dark:text-zinc-300">{item.format}</span>
-                                                </div>
-                                                <div className="mt-2 rounded-lg border border-slate-200 bg-white px-2 py-2 dark:border-zinc-700">
-                                                    <SavedBarcodePreview barcodeValue={item.barcodeValue} format={item.format} />
-                                                </div>
-                                                <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500 dark:text-zinc-400">
-                                                    <span>{currencySymbol} {item.price.toFixed(2)}</span>
-                                                    <span>{item.quantity} copies</span>
-                                                    <span>{formatSavedTime(item.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            <button
-                                                onClick={() => handleLoadSaved(item)}
-                                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                                            >
-                                                Load
-                                            </button>
-                                            <button
-                                                onClick={() => void handleQuickPrintSaved(item)}
-                                                className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
-                                            >
-                                                Print
-                                            </button>
-                                            <button
-                                                onClick={() => removeSavedBarcode(item.id)}
-                                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300"
-                                            >
-                                                <Trash2 size={13} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+                    {t('barcode.savedCount', { count: savedBarcodes.length, limit: MAX_SAVED_BARCODES })}
                 </div>
             </div>
+
+            <div className="flex min-h-0 flex-1 flex-col gap-4 2xl:grid 2xl:grid-cols-[minmax(520px,0.92fr)_minmax(580px,1.08fr)]">
+                <section className="shrink-0 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 2xl:flex 2xl:min-h-0 2xl:flex-col 2xl:overflow-hidden">
+                    <div className="p-4 2xl:min-h-0 2xl:flex-1">
+                        <div className="grid gap-4 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-950/60">
+                                <div className="mb-2 flex items-center justify-between">
+                                    <h2 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-zinc-200">
+                                        <Package size={14} /> {t('barcode.liveMockup')}
+                                    </h2>
+                                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                        {quantity}x
+                                    </span>
+                                </div>
+                                <LiveBarcodePreview
+                                    sku={sku}
+                                    title={title}
+                                    printedPrice={`${currencySymbol}${Number(printedPrice || 0).toFixed(2)}`}
+                                    storeLabelName={storeLabelName}
+                                    showStoreName={showStoreName}
+                                    showTitle={showTitle}
+                                    priceOption={priceOption}
+                                    emptyLabel={t('barcode.searchOrEnterSku')}
+                                    retailLabel={t('barcode.retail')}
+                                    wholesaleLabel={t('barcode.wholesale')}
+                                />
+                                <button
+                                    onClick={printCurrentBarcode}
+                                    disabled={printing || !sku}
+                                    className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-white dark:text-zinc-950"
+                                >
+                                    <Printer size={15} /> {printing ? t('barcode.openingPrint') : t('barcode.printLabel')}
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="relative">
+                                    <label className="mb-1 block text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+                                        {t('barcode.searchProduct')}
+                                    </label>
+                                    <Search size={15} className="absolute left-3 top-[34px] text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(event) => void handleSearch(event.target.value)}
+                                        placeholder={t('barcode.skuOrName')}
+                                        className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                                    />
+                                    {showSearchDropdown ? (
+                                        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-800">
+                                            {isSearching ? (
+                                                <div className="p-3 text-center text-xs text-slate-500">{t('barcode.searching')}</div>
+                                            ) : searchResults.length > 0 ? (
+                                                searchResults.map((product) => (
+                                                    <button
+                                                        key={product.id}
+                                                        onClick={() => selectProduct(product)}
+                                                        className="flex w-full items-center justify-between border-b border-slate-100 p-3 text-left last:border-0 hover:bg-slate-50 dark:border-zinc-700/50 dark:hover:bg-zinc-700/50"
+                                                    >
+                                                        <span className="min-w-0">
+                                                            <span className="block truncate text-sm font-bold text-slate-800 dark:text-zinc-100">{product.name}</span>
+                                                            <span className="block font-mono text-xs text-slate-500">{product.sku}</span>
+                                                        </span>
+                                                        <span className="shrink-0 text-sm font-black text-indigo-600">{currencySymbol}{product.price}</span>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="p-3 text-center text-xs text-slate-500">{t('barcode.noProductsFound')}</div>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <Field label={t('barcode.sku')}>
+                                        <input value={sku} onChange={(event) => setSku(event.target.value)} className={inputClassName} />
+                                    </Field>
+                                    <Field label={t('barcode.productTitle')}>
+                                        <input value={title} onChange={(event) => setTitle(event.target.value)} className={inputClassName} />
+                                    </Field>
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                    <Field label={t('barcode.priceType')}>
+                                        <select value={priceOption} onChange={(event) => setPriceOption(event.target.value as 'retail' | 'wholesale')} className={inputClassName}>
+                                            <option value="retail">{t('barcode.retail')}</option>
+                                            <option value="wholesale">{t('barcode.wholesale')}</option>
+                                        </select>
+                                    </Field>
+                                    <Field label={t('barcode.price', { currency: currencySymbol })}>
+                                        <input type="number" value={printedPrice} onChange={(event) => setPrintedPrice(Number(event.target.value))} className={inputClassName} />
+                                    </Field>
+                                    <Field label={t('barcode.qty')}>
+                                        <input type="number" min="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className={inputClassName} />
+                                    </Field>
+                                </div>
+
+                                <Field label={t('barcode.storeLabel')}>
+                                    <input value={storeLabelName} onChange={(event) => setStoreLabelName(event.target.value)} className={inputClassName} />
+                                </Field>
+
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    <Toggle checked={showStoreName} label={t('barcode.showStoreName')} onChange={setShowStoreName} />
+                                    <Toggle checked={showTitle} label={t('barcode.showTitle')} onChange={setShowTitle} />
+                                </div>
+
+                                {error ? <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{error}</p> : null}
+                                {status ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">{status}</p> : null}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="shrink-0 border-t border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                        <button
+                            onClick={saveCurrentBarcode}
+                            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-black text-white shadow-sm transition hover:bg-indigo-700"
+                        >
+                            <Save size={16} /> {t('barcode.saveBarcode')}
+                        </button>
+                    </div>
+                </section>
+
+                <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-zinc-800">
+                        <div>
+                            <h2 className="text-sm font-black text-slate-900 dark:text-white">{t('barcode.savedBarcodes')}</h2>
+                            <p className="text-xs text-slate-500 dark:text-zinc-400">{t('barcode.loadSavedHint')}</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            {t('barcode.maxCount', { limit: MAX_SAVED_BARCODES })}
+                        </span>
+                    </div>
+
+                    <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                        {savedBarcodes.length === 0 ? (
+                            <div className="flex h-full min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 text-center text-slate-400 dark:border-zinc-700">
+                                <Barcode size={30} className="mb-2 opacity-40" />
+                                <p className="text-sm font-black">{t('barcode.noSavedBarcodes')}</p>
+                                <p className="mt-1 text-xs">{t('barcode.createAndSaveHint')}</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
+                                {savedBarcodes.map((item) => (
+                                    <article key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-950/70">
+                                        <div className="mb-2 flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-black text-slate-900 dark:text-white">{item.title || t('barcode.untitledProduct')}</p>
+                                                <p className="font-mono text-xs text-slate-500">{item.sku}</p>
+                                            </div>
+                                            <button onClick={() => removeSavedBarcode(item.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/20">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200 bg-white px-2 py-2 dark:border-zinc-800">
+                                            <LiveBarcodePreview
+                                                sku={item.sku}
+                                                title={item.title}
+                                                printedPrice={`${currencySymbol}${Number(item.printedPrice || 0).toFixed(2)}`}
+                                                storeLabelName={item.storeLabelName}
+                                                showStoreName={item.showStoreName}
+                                                showTitle={item.showTitle}
+                                                priceOption={item.priceOption}
+                                                emptyLabel={t('barcode.searchOrEnterSku')}
+                                                retailLabel={t('barcode.retail')}
+                                                wholesaleLabel={t('barcode.wholesale')}
+                                            />
+                                        </div>
+
+                                        <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
+                                            <Stat label={t('barcode.qty')} value={`${item.quantity}`} />
+                                            <Stat label={t('barcode.type')} value={item.priceOption === 'retail' ? t('barcode.retail') : t('barcode.wholesale')} />
+                                            <Stat label={t('barcode.savedOn')} value={formatDate(item.createdAt)} />
+                                        </div>
+
+                                        <button
+                                            onClick={() => loadSavedBarcode(item)}
+                                            className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-xs font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-zinc-950"
+                                        >
+                                            <Check size={14} /> {t('barcode.loadToMockup')}
+                                        </button>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            </div>
+            </div>
+        </div>
+    );
+}
+
+const inputClassName = 'h-9 w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white';
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <label className="block">
+            <span className="mb-1 block text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400">{label}</span>
+            {children}
+        </label>
+    );
+}
+
+function Toggle({ checked, label, onChange }: { checked: boolean; label: string; onChange: (value: boolean) => void }) {
+    return (
+        <button
+            type="button"
+            onClick={() => onChange(!checked)}
+            className={`flex h-9 items-center justify-between rounded-xl border px-3 text-xs font-black transition ${
+                checked
+                    ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/40 dark:text-indigo-300'
+                    : 'border-slate-200 bg-white text-slate-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400'
+            }`}
+        >
+            <span>{label}</span>
+            <span className={`h-2.5 w-2.5 rounded-full ${checked ? 'bg-indigo-600' : 'bg-slate-300'}`} />
+        </button>
+    );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-lg bg-white px-2 py-1.5 dark:bg-zinc-900">
+            <p className="font-black uppercase tracking-wider text-slate-400">{label}</p>
+            <p className="truncate font-black capitalize text-slate-700 dark:text-zinc-200">{value}</p>
         </div>
     );
 }

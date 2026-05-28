@@ -8,9 +8,11 @@ const escapeHtml = (value: string) =>
 
 export interface BarcodeLabelData {
     storeName: string;
+    title?: string;
     barcodeValue: string;
     svgMarkup: string;
     price: number;
+    priceLabel?: string;
     quantity: number;
     currencySymbol?: string;
 }
@@ -21,10 +23,11 @@ const renderLabels = (items: BarcodeLabelData[]) => items.flatMap((item) => {
 
     return Array.from({ length: copies }, (_, index) => `
         <section class="label ${index < copies - 1 ? 'page-break' : ''}">
-            <div class="name">${escapeHtml(item.storeName || 'Store')}</div>
+            ${item.storeName ? `<div class="name">${escapeHtml(item.storeName)}</div>` : ''}
+            ${item.title ? `<div class="title">${escapeHtml(item.title)}</div>` : ''}
             <div class="barcode">${item.svgMarkup}</div>
             <div class="code">${escapeHtml(item.barcodeValue)}</div>
-            <div class="price">${escapeHtml(currencySymbol)} ${item.price.toFixed(2)}</div>
+            <div class="price">${escapeHtml(item.priceLabel || `${currencySymbol} ${item.price.toFixed(2)}`)}</div>
         </section>
     `);
 }).join('');
@@ -68,6 +71,15 @@ export const generateBarcodeBatchHTML = (items: BarcodeLabelData[]) => {
                 text-transform: uppercase;
                 letter-spacing: 0.3px;
                 line-height: 1.2;
+                max-width: 46mm;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .title {
+                font-size: 8px;
+                font-weight: bold;
+                line-height: 1.1;
                 max-width: 46mm;
                 overflow: hidden;
                 text-overflow: ellipsis;

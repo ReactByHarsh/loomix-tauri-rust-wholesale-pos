@@ -1,293 +1,35 @@
 import { useSettingsStore, type AppLanguage } from './store/useSettingsStore';
 
-type TranslationKey =
-    | 'common.add'
-    | 'common.all'
-    | 'common.cancel'
-    | 'common.clear'
-    | 'common.close'
-    | 'common.copies'
-    | 'common.date'
-    | 'common.delete'
-    | 'common.discount'
-    | 'common.download'
-    | 'common.edit'
-    | 'common.export'
-    | 'common.hidden'
-    | 'common.import'
-    | 'common.loading'
-    | 'common.name'
-    | 'common.next'
-    | 'common.optional'
-    | 'common.phone'
-    | 'common.preview'
-    | 'common.prev'
-    | 'common.price'
-    | 'common.print'
-    | 'common.quantity'
-    | 'common.rate'
-    | 'common.ready'
-    | 'common.retry'
-    | 'common.save'
-    | 'common.saved'
-    | 'common.saving'
-    | 'common.search'
-    | 'common.stock'
-    | 'common.total'
-    | 'common.update'
-    | 'common.visible'
-    | 'layout.dashboard'
-    | 'layout.pos'
-    | 'layout.inventory'
-    | 'layout.vendors'
-    | 'layout.history'
-    | 'layout.barcode'
-    | 'layout.settings'
-    | 'layout.retailPos'
-    | 'settings.title'
-    | 'settings.subtitle'
-    | 'settings.storeIdentity'
-    | 'settings.storeName'
-    | 'settings.address'
-    | 'settings.receiptFooter'
-    | 'settings.printerRouting'
-    | 'settings.billPrinter'
-    | 'settings.barcodePrinter'
-    | 'settings.selectBillPrinter'
-    | 'settings.selectBarcodePrinter'
-    | 'settings.thermalBillSize'
-    | 'settings.compactCounterBill'
-    | 'settings.widerLayout'
-    | 'settings.appearanceBilling'
-    | 'settings.theme'
-    | 'settings.system'
-    | 'settings.light'
-    | 'settings.dark'
-    | 'settings.themeHint'
-    | 'settings.taxRate'
-    | 'settings.taxOn'
-    | 'settings.taxOff'
-    | 'settings.currency'
-    | 'settings.modulesLanguage'
-    | 'settings.language'
-    | 'settings.languageHint'
-    | 'settings.defaultBillingMode'
-    | 'settings.defaultBillingModeHint'
-    | 'settings.vendorsPage'
-    | 'settings.vendorsPageHint'
-    | 'settings.receiptPreview'
-    | 'settings.receiptPreviewPaper'
-    | 'settings.dataManagement'
-    | 'settings.deleteHistory'
-    | 'settings.deleteHistoryHint'
-    | 'settings.confirmDelete'
-    | 'settings.cannotUndo'
-    | 'settings.retail'
-    | 'settings.wholesale'
-    | 'settings.english'
-    | 'settings.hindi'
-    | 'settings.marathi'
-    | 'settings.bengali'
-    | 'settings.gujarati'
-    | 'pos.title'
-    | 'pos.subtitle'
-    | 'pos.searchPlaceholder'
-    | 'pos.order'
-    | 'pos.productsEmpty'
-    | 'pos.cartEmpty'
-    | 'pos.addCustomer'
-    | 'pos.noPhone'
-    | 'pos.extraDiscount'
-    | 'pos.checkout'
-    | 'pos.printCheckout'
-    | 'pos.transactionRecorded'
-    | 'pos.success'
-    | 'pos.customerName'
-    | 'pos.dateOfBirth'
-    | 'pos.customerOptional'
-    | 'pos.scanOrClick'
-    | 'pos.outOfStock'
-    | 'pos.productOutOfStock'
-    | 'pos.billingMode'
-    | 'pos.retailPrice'
-    | 'pos.wholesalePrice'
-    | 'pos.priceFallback'
-    | 'pos.payment.cash'
-    | 'pos.payment.card'
-    | 'pos.payment.upi'
-    | 'inventory.title'
-    | 'inventory.subtitle'
-    | 'inventory.products'
-    | 'inventory.value'
-    | 'inventory.lowStock'
-    | 'inventory.out'
-    | 'inventory.template'
-    | 'inventory.addProduct'
-    | 'inventory.searchPlaceholder'
-    | 'inventory.product'
-    | 'inventory.sku'
-    | 'inventory.category'
-    | 'inventory.retailPrice'
-    | 'inventory.wholesalePrice'
-    | 'inventory.costPrice'
-    | 'inventory.actions'
-    | 'inventory.loading'
-    | 'inventory.noProducts'
-    | 'inventory.addFirstProduct'
-    | 'inventory.adjustFilters'
-    | 'inventory.editProduct'
-    | 'inventory.updateDetails'
-    | 'inventory.enterInformation'
-    | 'inventory.skuBarcode'
-    | 'inventory.productName'
-    | 'inventory.generateAuto'
-    | 'inventory.stockStatus.out'
-    | 'inventory.stockStatus.low'
-    | 'inventory.stockStatus.ok'
-    | 'history.title'
-    | 'history.subtitle'
-    | 'history.searchPlaceholder'
-    | 'history.total'
-    | 'history.today'
-    | 'history.average'
-    | 'history.showing'
-    | 'history.orders'
-    | 'history.perOrder'
-    | 'history.order'
-    | 'history.dateTime'
-    | 'history.payment'
-    | 'history.amount'
-    | 'history.view'
-    | 'history.print'
-    | 'history.allPayments'
-    | 'history.noTransactions'
-    | 'history.adjustFilters'
-    | 'history.viewReprint'
-    | 'history.each'
-    | 'history.allTime'
-    | 'vendors.title'
-    | 'vendors.subtitle'
-    | 'vendors.allSummary'
-    | 'vendors.selectVendor'
-    | 'vendors.addTransaction'
-    | 'vendors.records'
-    | 'vendors.totalPurchase'
-    | 'vendors.totalPaid'
-    | 'vendors.pending'
-    | 'vendors.searchPlaceholder'
-    | 'vendors.allTime'
-    | 'vendors.today'
-    | 'vendors.week'
-    | 'vendors.month'
-    | 'vendors.vendor'
-    | 'vendors.purchaseAmount'
-    | 'vendors.paymentAmount'
-    | 'vendors.pendingAmount'
-    | 'vendors.notes'
-    | 'vendors.noRecords'
-    | 'vendors.addFirstRecord'
-    | 'vendors.record'
-    | 'vendors.purchaseDetails'
-    | 'vendors.paymentDetails'
-    | 'vendors.purchaseBillImage'
-    | 'vendors.paymentBillImage'
-    | 'vendors.uploadImage'
-    | 'vendors.changeImage'
-    | 'vendors.totalAmount'
-    | 'vendors.paidAmount'
-    | 'vendors.addVendor'
-    | 'vendors.vendorName'
-    | 'vendors.createVendor'
-    | 'dashboard.title'
-    | 'dashboard.subtitle'
-    | 'dashboard.live'
-    | 'dashboard.sales'
-    | 'dashboard.today'
-    | 'dashboard.total'
-    | 'dashboard.transactions'
-    | 'dashboard.allTime'
-    | 'dashboard.lowStock'
-    | 'dashboard.needRestock'
-    | 'dashboard.allStocked'
-    | 'dashboard.profit'
-    | 'dashboard.salesTrend'
-    | 'dashboard.last7Days'
-    | 'dashboard.revenue'
-    | 'dashboard.loading'
-    | 'dashboard.unavailable'
-    | 'dashboard.startTransaction'
-    | 'dashboard.manageProducts'
-    | 'dashboard.viewTransactions'
-    | 'barcode.title'
-    | 'barcode.subtitle'
-    | 'barcode.createLabel'
-    | 'barcode.barcodeValue'
-    | 'barcode.enterCode'
-    | 'barcode.format'
-    | 'barcode.copiesSummary'
-    | 'barcode.downloadSvg'
-    | 'barcode.printLabels'
-    | 'barcode.printing'
-    | 'barcode.printed'
-    | 'barcode.livePreview'
-    | 'barcode.previewHint'
-    | 'barcode.enterPreview'
-    | 'barcode.invalid'
-    | 'barcode.hint.code128'
-    | 'barcode.hint.ean13'
-    | 'barcode.hint.ean8'
-    | 'barcode.hint.upc'
-    | 'barcode.hint.code39'
-    | 'receipt.customer'
-    | 'receipt.phone'
-    | 'receipt.item'
-    | 'receipt.amount'
-    | 'receipt.subtotal'
-    | 'receipt.tax'
-    | 'receipt.total'
-    | 'receipt.walkIn'
-    | 'receipt.visitAgain'
-    | 'time.today'
-    | 'time.yesterday';
-
+type TranslationKey = string;
 type TranslationTable = Record<TranslationKey, string>;
 
 const en: TranslationTable = {
     'common.add': 'Add',
     'common.all': 'All',
+    'common.backup': 'Backup',
     'common.cancel': 'Cancel',
-    'common.clear': 'Clear',
     'common.close': 'Close',
-    'common.copies': 'Copies',
-    'common.date': 'Date',
     'common.delete': 'Delete',
-    'common.discount': 'Discount',
-    'common.download': 'Download',
-    'common.edit': 'Edit',
     'common.export': 'Export',
     'common.hidden': 'Hidden',
     'common.import': 'Import',
     'common.loading': 'Loading...',
     'common.name': 'Name',
     'common.next': 'Next',
-    'common.optional': 'Optional',
     'common.phone': 'Phone',
     'common.preview': 'Preview',
     'common.prev': 'Prev',
-    'common.price': 'Price',
     'common.print': 'Print',
-    'common.quantity': 'Qty',
-    'common.rate': 'Rate',
     'common.ready': 'Ready',
-    'common.retry': 'Retry',
+    'common.restore': 'Restore',
     'common.save': 'Save Settings',
     'common.saved': 'Saved',
     'common.saving': 'Saving...',
-    'common.search': 'Search',
     'common.stock': 'Stock',
     'common.total': 'Total',
     'common.update': 'Update',
     'common.visible': 'Visible',
+
     'layout.dashboard': 'Dashboard',
     'layout.pos': 'POS',
     'layout.inventory': 'Inventory',
@@ -295,7 +37,7 @@ const en: TranslationTable = {
     'layout.history': 'History',
     'layout.barcode': 'Barcode',
     'layout.settings': 'Settings',
-    'layout.retailPos': 'Retail POS',
+
     'settings.title': 'Store Settings',
     'settings.subtitle': 'Configure printers, language, modules, and billing defaults',
     'settings.storeIdentity': 'Store Identity',
@@ -341,8 +83,39 @@ const en: TranslationTable = {
     'settings.marathi': 'Marathi',
     'settings.bengali': 'Bengali',
     'settings.gujarati': 'Gujarati',
+    'settings.updatesTitle': 'App Updates',
+    'settings.installedVersion': 'Installed version',
+    'settings.availableVersion': 'Available version',
+    'settings.upToDate': 'Up to date',
+    'settings.latestVersion': "You're on the latest version",
+    'settings.checkingUpdates': 'Checking for updates...',
+    'settings.updateAvailable': 'Update available - see banner above',
+    'settings.readyToRestart': 'Ready to restart',
+    'settings.lastChecked': 'Last checked',
+    'settings.notCheckedYet': 'Not checked yet',
+    'settings.justNow': 'Just now',
+    'settings.minutesAgo': '{count}m ago',
+    'settings.hoursAgo': '{count}h ago',
+    'settings.checkForUpdates': 'Check for updates',
+    'settings.autoChecksOnStartup': 'App auto-checks on startup',
+    'settings.backupRestore': 'Backup & Restore',
+    'settings.backupRestoreHint': 'Backup and restore saved barcodes, inventory, transaction history, or the full app data.',
+    'settings.backupSavedBarcodes': 'Saved Barcodes',
+    'settings.backupSavedBarcodesHint': 'Back up the recent barcode list stored in the app, capped at 100 items.',
+    'settings.backupInventory': 'Inventory Data',
+    'settings.backupInventoryHint': 'Back up all products including retail price, wholesale price, cost, stock, and categories.',
+    'settings.backupHistory': 'Transaction History',
+    'settings.backupHistoryHint': 'Back up all transactions and transaction items so history can be restored exactly.',
+    'settings.backupAll': 'Full Project Data',
+    'settings.backupAllHint': 'Back up settings, saved barcodes, inventory, transactions, vendors, and vendor profiles together.',
+    'settings.backingUp': 'Backing up...',
+    'settings.restoring': 'Restoring...',
+    'settings.inventoryRestored': 'Inventory data restored.',
+    'settings.historyRestored': 'Transaction history restored.',
+    'settings.transactionHistoryCleared': 'Transaction history cleared.',
+    'settings.failedToClearHistory': 'Failed to clear history.',
+
     'pos.title': 'POS Terminal',
-    'pos.subtitle': 'Scan or click to add',
     'pos.searchPlaceholder': 'Search by name or SKU...',
     'pos.order': 'Order',
     'pos.productsEmpty': 'No products found',
@@ -360,13 +133,16 @@ const en: TranslationTable = {
     'pos.scanOrClick': 'Scan or click to add',
     'pos.outOfStock': 'Out of stock!',
     'pos.productOutOfStock': 'Product out of stock!',
-    'pos.billingMode': 'Billing Mode',
-    'pos.retailPrice': 'Retail Price',
-    'pos.wholesalePrice': 'Wholesale Price',
     'pos.priceFallback': 'Retail fallback',
     'pos.payment.cash': 'Cash',
     'pos.payment.card': 'Card',
     'pos.payment.upi': 'UPI',
+    'pos.allCategories': 'All Categories',
+    'pos.focusSearch': 'Focus Search',
+    'pos.switchMode': 'Switch Mode',
+    'pos.quickCheckout': 'Quick Checkout',
+    'pos.clearView': 'Clear View',
+
     'inventory.title': 'Inventory',
     'inventory.subtitle': 'Manage products',
     'inventory.products': 'Products',
@@ -375,6 +151,7 @@ const en: TranslationTable = {
     'inventory.out': 'Out',
     'inventory.template': 'Template',
     'inventory.addProduct': 'Add Product',
+    'inventory.editProduct': 'Edit Product',
     'inventory.searchPlaceholder': 'Search by name or SKU...',
     'inventory.product': 'Product',
     'inventory.sku': 'SKU',
@@ -384,18 +161,26 @@ const en: TranslationTable = {
     'inventory.costPrice': 'Cost',
     'inventory.actions': 'Actions',
     'inventory.loading': 'Loading...',
-    'inventory.noProducts': 'No products found',
-    'inventory.addFirstProduct': 'Add your first product.',
     'inventory.adjustFilters': 'Try adjusting filters.',
-    'inventory.editProduct': 'Edit Product',
     'inventory.updateDetails': 'Update details',
     'inventory.enterInformation': 'Enter information',
     'inventory.skuBarcode': 'SKU / Barcode',
     'inventory.productName': 'Product Name',
     'inventory.generateAuto': 'Auto',
     'inventory.stockStatus.out': 'Out',
-    'inventory.stockStatus.low': 'Low',
-    'inventory.stockStatus.ok': 'In Stock',
+    'inventory.importProducts': 'Import Products',
+    'inventory.importHint': 'Upload a CSV file to bulk import inventory.',
+    'inventory.clickToUpload': 'Click to upload',
+    'inventory.dragAndDrop': 'or drag and drop',
+    'inventory.csvOnly': 'CSV files only',
+    'inventory.importData': 'Import Data',
+    'inventory.importing': 'Importing...',
+    'inventory.productsCount': '{shown} of {total} products',
+    'inventory.enterSku': 'Enter SKU',
+    'inventory.enterName': 'Enter name',
+    'inventory.categoryOptional': 'Category (optional)',
+    'inventory.printBarcode': 'Print Barcode',
+
     'history.title': 'Transaction History',
     'history.subtitle': 'View and reprint receipts',
     'history.searchPlaceholder': 'Search by ID...',
@@ -403,6 +188,7 @@ const en: TranslationTable = {
     'history.today': 'Today',
     'history.average': 'Average',
     'history.showing': 'Showing',
+    'history.filtered': 'Filtered',
     'history.orders': 'orders',
     'history.perOrder': 'Per order',
     'history.order': 'Order',
@@ -412,11 +198,10 @@ const en: TranslationTable = {
     'history.view': 'View',
     'history.print': 'Print',
     'history.allPayments': 'All Payments',
-    'history.noTransactions': 'No transactions found',
-    'history.adjustFilters': 'Try adjusting filters.',
-    'history.viewReprint': 'View and reprint receipts',
     'history.each': 'each',
-    'history.allTime': 'All time',
+    'history.transactionsCount': '{shown} of {total} transactions',
+    'history.unknown': 'Unknown',
+
     'vendors.title': 'Vendor Management',
     'vendors.subtitle': 'Track purchases & payments',
     'vendors.allSummary': 'All Vendors (Summary)',
@@ -426,30 +211,44 @@ const en: TranslationTable = {
     'vendors.totalPurchase': 'Total Purchase',
     'vendors.totalPaid': 'Total Paid',
     'vendors.pending': 'Pending',
+    'vendors.paid': 'Paid',
     'vendors.searchPlaceholder': 'Search by vendor name or notes...',
     'vendors.allTime': 'All Time',
     'vendors.today': 'Today',
     'vendors.week': 'Week',
     'vendors.month': 'Month',
-    'vendors.vendor': 'Vendor',
-    'vendors.purchaseAmount': 'Purchase Amount',
-    'vendors.paymentAmount': 'Payment Amount',
-    'vendors.pendingAmount': 'Pending Amount',
-    'vendors.notes': 'Notes',
     'vendors.noRecords': 'No vendor records found',
     'vendors.addFirstRecord': 'Add your first vendor record.',
-    'vendors.record': 'Record',
+    'vendors.noProfiles': 'No vendor profiles found.',
+    'vendors.addVendorProfile': 'Add New Vendor Profile',
+    'vendors.editRecord': 'Edit Vendor Record',
+    'vendors.addRecord': 'Add Vendor Record',
+    'vendors.updateDetails': 'Update details',
+    'vendors.enterVendorInformation': 'Enter vendor information',
+    'vendors.vendor': 'Vendor',
+    'vendors.selectVendorOption': 'Select Vendor',
+    'vendors.addNewVendor': 'Add New Vendor',
+    'vendors.date': 'Date',
     'vendors.purchaseDetails': 'Purchase Details',
-    'vendors.paymentDetails': 'Payment Details',
     'vendors.purchaseBillImage': 'Purchase Bill Image',
+    'vendors.paymentDetails': 'Payment Details',
     'vendors.paymentBillImage': 'Payment Bill Image',
     'vendors.uploadImage': 'Upload Image',
     'vendors.changeImage': 'Change Image',
+    'vendors.purchaseAmount': 'Purchase Amount',
+    'vendors.paymentAmount': 'Payment Amount',
     'vendors.totalAmount': 'Total Amount',
     'vendors.paidAmount': 'Paid Amount',
-    'vendors.addVendor': 'Add New Vendor',
+    'vendors.pendingAmount': 'Pending Amount',
+    'vendors.notes': 'Notes',
+    'vendors.optionalNotes': 'Optional notes...',
     'vendors.vendorName': 'Vendor Name',
+    'vendors.contactNumber': 'Contact Number',
+    'vendors.location': 'Location',
+    'vendors.businessOrPersonName': 'Business or Person Name',
     'vendors.createVendor': 'Create Vendor',
+    'vendors.recordsCount': '{shown} of {total} records',
+
     'dashboard.title': 'Dashboard',
     'dashboard.subtitle': 'Business overview',
     'dashboard.live': 'Live',
@@ -470,35 +269,49 @@ const en: TranslationTable = {
     'dashboard.startTransaction': 'Start transaction',
     'dashboard.manageProducts': 'Manage products',
     'dashboard.viewTransactions': 'View transactions',
-    'barcode.title': 'Barcode Studio',
-    'barcode.subtitle': 'Print clean barcode labels',
-    'barcode.createLabel': 'Create Label',
-    'barcode.barcodeValue': 'Barcode Value',
-    'barcode.enterCode': 'Enter code or scan here',
-    'barcode.format': 'Format',
-    'barcode.copiesSummary': '{price} x {count} {copies}',
-    'barcode.downloadSvg': 'Download SVG',
-    'barcode.printLabels': 'Print Labels',
-    'barcode.printing': 'Printing...',
-    'barcode.printed': 'Printed',
-    'barcode.livePreview': 'Live Preview',
-    'barcode.previewHint': 'Label that will go to the printer',
-    'barcode.enterPreview': 'Enter a barcode value to preview',
-    'barcode.invalid': 'Invalid barcode: {message}',
-    'barcode.hint.code128': 'Best for mixed letters and numbers',
-    'barcode.hint.ean13': 'Retail standard with 12 or 13 digits',
-    'barcode.hint.ean8': 'Compact retail format with 7 or 8 digits',
-    'barcode.hint.upc': 'Common retail format with 11 or 12 digits',
-    'barcode.hint.code39': 'Industrial code using uppercase text',
-    'receipt.customer': 'Customer',
-    'receipt.phone': 'Ph',
-    'receipt.item': 'ITEM',
-    'receipt.amount': 'AMT',
+
+    'barcode.title': 'Barcode Labels',
+    'barcode.subtitle': 'Compact label setup, live mockup, and saved barcode cards.',
+    'barcode.savedCount': '{count}/{limit} saved',
+    'barcode.liveMockup': 'Live Mockup',
+    'barcode.searchOrEnterSku': 'Search or enter SKU',
+    'barcode.openingPrint': 'Opening print...',
+    'barcode.printLabel': 'Print Label',
+    'barcode.searchProduct': 'Search product',
+    'barcode.skuOrName': 'SKU or product name...',
+    'barcode.searching': 'Searching...',
+    'barcode.noProductsFound': 'No products found',
+    'barcode.sku': 'SKU',
+    'barcode.productTitle': 'Product title',
+    'barcode.priceType': 'Price type',
+    'barcode.price': 'Price ({currency})',
+    'barcode.qty': 'Qty',
+    'barcode.storeLabel': 'Store label',
+    'barcode.showStoreName': 'Show store name',
+    'barcode.showTitle': 'Show title',
+    'barcode.saveBarcode': 'Save Barcode',
+    'barcode.savedBarcodes': 'Saved Barcodes',
+    'barcode.loadSavedHint': 'Load any saved card into the live mockup.',
+    'barcode.maxCount': 'Max {limit}',
+    'barcode.noSavedBarcodes': 'No saved barcodes yet',
+    'barcode.createAndSaveHint': 'Create a label on the left and press Save Barcode.',
+    'barcode.loadToMockup': 'Load to mockup',
+    'barcode.savedOn': 'Saved',
+    'barcode.skuRequiredSave': 'SKU is required before saving.',
+    'barcode.skuRequiredPrint': 'SKU is required before printing.',
+    'barcode.loadedMockup': 'Loaded into mockup',
+    'barcode.printDialogOpened': 'Print dialog opened',
+    'barcode.printFailed': 'Print failed.',
+    'barcode.savedStatus': 'Saved. {count} of {limit} slots used.',
+    'barcode.retail': 'Retail',
+    'barcode.wholesale': 'Wholesale',
+    'barcode.untitledProduct': 'Untitled product',
+    'barcode.type': 'Type',
+
     'receipt.subtotal': 'Subtotal',
     'receipt.tax': 'Tax ({rate}%)',
     'receipt.total': 'TOTAL',
-    'receipt.walkIn': 'Walk-in',
-    'receipt.visitAgain': 'Please visit again!',
+
     'time.today': 'Today',
     'time.yesterday': 'Yesterday',
 };
@@ -506,37 +319,30 @@ const en: TranslationTable = {
 const hi: Partial<TranslationTable> = {
     'common.add': 'जोड़ें',
     'common.all': 'सभी',
+    'common.backup': 'बैकअप',
     'common.cancel': 'रद्द करें',
-    'common.clear': 'साफ करें',
     'common.close': 'बंद करें',
-    'common.copies': 'कॉपी',
-    'common.date': 'तारीख',
     'common.delete': 'हटाएँ',
-    'common.download': 'डाउनलोड',
-    'common.edit': 'संपादित करें',
     'common.export': 'एक्सपोर्ट',
     'common.hidden': 'छिपा हुआ',
     'common.import': 'इम्पोर्ट',
     'common.loading': 'लोड हो रहा है...',
     'common.name': 'नाम',
     'common.next': 'अगला',
-    'common.optional': 'वैकल्पिक',
     'common.phone': 'फोन',
     'common.preview': 'पूर्वावलोकन',
     'common.prev': 'पिछला',
-    'common.price': 'कीमत',
     'common.print': 'प्रिंट',
-    'common.quantity': 'मात्रा',
-    'common.rate': 'रेट',
     'common.ready': 'तैयार',
+    'common.restore': 'रीस्टोर',
     'common.save': 'सेटिंग्स सेव करें',
     'common.saved': 'सेव हो गया',
     'common.saving': 'सेव हो रहा है...',
-    'common.search': 'खोजें',
     'common.stock': 'स्टॉक',
     'common.total': 'कुल',
     'common.update': 'अपडेट',
     'common.visible': 'दिखाएँ',
+
     'layout.dashboard': 'डैशबोर्ड',
     'layout.pos': 'पीओएस',
     'layout.inventory': 'इन्वेंटरी',
@@ -544,6 +350,7 @@ const hi: Partial<TranslationTable> = {
     'layout.history': 'हिस्ट्री',
     'layout.barcode': 'बारकोड',
     'layout.settings': 'सेटिंग्स',
+
     'settings.title': 'स्टोर सेटिंग्स',
     'settings.subtitle': 'प्रिंटर, भाषा, मॉड्यूल और बिलिंग डिफॉल्ट सेट करें',
     'settings.storeIdentity': 'स्टोर जानकारी',
@@ -551,14 +358,37 @@ const hi: Partial<TranslationTable> = {
     'settings.address': 'पता',
     'settings.receiptFooter': 'रसीद फुटर',
     'settings.printerRouting': 'प्रिंटर रूटिंग',
+    'settings.billPrinter': 'बिल प्रिंटर',
+    'settings.barcodePrinter': 'बारकोड प्रिंटर',
+    'settings.selectBillPrinter': 'बिल प्रिंटर चुनें',
+    'settings.selectBarcodePrinter': 'बारकोड प्रिंटर चुनें',
+    'settings.thermalBillSize': 'थर्मल बिल साइज',
+    'settings.compactCounterBill': 'कॉम्पैक्ट काउंटर बिल',
+    'settings.widerLayout': 'चौड़ा लेआउट',
     'settings.appearanceBilling': 'दिखावट और बिलिंग',
+    'settings.theme': 'थीम',
+    'settings.system': 'सिस्टम',
+    'settings.light': 'लाइट',
+    'settings.dark': 'डार्क',
+    'settings.themeHint': 'सेटिंग्स सेव करने के बाद थीम लागू होगी',
+    'settings.taxRate': 'टैक्स रेट (%)',
+    'settings.taxOn': 'टैक्स चालू',
+    'settings.taxOff': 'टैक्स बंद',
+    'settings.currency': 'मुद्रा',
     'settings.modulesLanguage': 'मॉड्यूल और भाषा',
     'settings.language': 'भाषा',
+    'settings.languageHint': 'यह ऐप के मुख्य इंटरफेस का अनुवाद करता है।',
     'settings.defaultBillingMode': 'डिफॉल्ट बिलिंग मोड',
+    'settings.defaultBillingModeHint': 'पीओएस इसी प्राइस मोड में खुलेगा।',
     'settings.vendorsPage': 'वेंडर्स पेज',
+    'settings.vendorsPageHint': 'साइडबार और रूट्स से वेंडर मैनेजमेंट दिखाएँ या छिपाएँ।',
     'settings.receiptPreview': 'थर्मल रसीद प्रीव्यू',
+    'settings.receiptPreviewPaper': '{paper} पेपर',
     'settings.dataManagement': 'डेटा प्रबंधन',
     'settings.deleteHistory': 'हिस्ट्री हटाएँ',
+    'settings.deleteHistoryHint': 'ट्रांजैक्शन हिस्ट्री हटाने से पुराने बिल रिकॉर्ड हमेशा के लिए हट जाएँगे।',
+    'settings.confirmDelete': 'हटाना पुष्टि करें',
+    'settings.cannotUndo': 'यह कार्रवाई वापस नहीं की जा सकती।',
     'settings.retail': 'रिटेल',
     'settings.wholesale': 'होलसेल',
     'settings.english': 'अंग्रेज़ी',
@@ -566,97 +396,934 @@ const hi: Partial<TranslationTable> = {
     'settings.marathi': 'मराठी',
     'settings.bengali': 'बंगाली',
     'settings.gujarati': 'गुजराती',
+    'settings.updatesTitle': 'ऐप अपडेट्स',
+    'settings.installedVersion': 'इंस्टॉल किया गया वर्ज़न',
+    'settings.availableVersion': 'उपलब्ध वर्ज़न',
+    'settings.upToDate': 'अप टू डेट',
+    'settings.latestVersion': 'आप नवीनतम वर्ज़न पर हैं',
+    'settings.checkingUpdates': 'अपडेट जाँचे जा रहे हैं...',
+    'settings.updateAvailable': 'अपडेट उपलब्ध है - ऊपर बैनर देखें',
+    'settings.readyToRestart': 'रीस्टार्ट के लिए तैयार',
+    'settings.lastChecked': 'आखिरी जाँच',
+    'settings.notCheckedYet': 'अभी तक जाँच नहीं हुई',
+    'settings.justNow': 'अभी',
+    'settings.minutesAgo': '{count} मिनट पहले',
+    'settings.hoursAgo': '{count} घंटे पहले',
+    'settings.checkForUpdates': 'अपडेट जाँचें',
+    'settings.autoChecksOnStartup': 'ऐप शुरू होते ही अपडेट जाँचता है',
+    'settings.backupRestore': 'बैकअप और रीस्टोर',
+    'settings.backupRestoreHint': 'सेव बारकोड, इन्वेंटरी, ट्रांजैक्शन हिस्ट्री या पूरे ऐप डेटा का बैकअप लें और रीस्टोर करें।',
+    'settings.backupSavedBarcodes': 'सेव बारकोड',
+    'settings.backupSavedBarcodesHint': 'ऐप में स्टोर की गई हाल की बारकोड सूची का बैकअप लें, अधिकतम 100 आइटम।',
+    'settings.backupInventory': 'इन्वेंटरी डेटा',
+    'settings.backupInventoryHint': 'रिटेल, होलसेल, लागत, स्टॉक और कैटेगरी सहित सभी प्रोडक्ट्स का बैकअप लें।',
+    'settings.backupHistory': 'ट्रांजैक्शन हिस्ट्री',
+    'settings.backupHistoryHint': 'सभी ट्रांजैक्शन और ट्रांजैक्शन आइटम्स का बैकअप लें ताकि हिस्ट्री ठीक से रीस्टोर हो सके।',
+    'settings.backupAll': 'पूरा प्रोजेक्ट डेटा',
+    'settings.backupAllHint': 'सेटिंग्स, सेव बारकोड, इन्वेंटरी, ट्रांजैक्शन, वेंडर्स और वेंडर प्रोफाइल्स का संयुक्त बैकअप लें।',
+    'settings.backingUp': 'बैकअप हो रहा है...',
+    'settings.restoring': 'रीस्टोर हो रहा है...',
+    'settings.inventoryRestored': 'इन्वेंटरी डेटा रीस्टोर हो गया।',
+    'settings.historyRestored': 'ट्रांजैक्शन हिस्ट्री रीस्टोर हो गई।',
+    'settings.transactionHistoryCleared': 'ट्रांजैक्शन हिस्ट्री साफ़ कर दी गई।',
+    'settings.failedToClearHistory': 'हिस्ट्री साफ़ नहीं हो सकी।',
+
     'pos.title': 'पीओएस टर्मिनल',
-    'pos.subtitle': 'स्कैन करें या क्लिक करके जोड़ें',
     'pos.searchPlaceholder': 'नाम या SKU से खोजें...',
     'pos.order': 'ऑर्डर',
     'pos.productsEmpty': 'कोई प्रोडक्ट नहीं मिला',
     'pos.cartEmpty': 'कार्ट खाली है',
     'pos.addCustomer': 'ग्राहक जोड़ें',
+    'pos.noPhone': 'फोन नहीं',
     'pos.extraDiscount': 'अतिरिक्त छूट',
     'pos.checkout': 'चेकआउट',
     'pos.printCheckout': 'प्रिंट और चेकआउट',
     'pos.transactionRecorded': 'लेनदेन दर्ज हो गया',
     'pos.success': 'सफल!',
-    'pos.billingMode': 'बिलिंग मोड',
-    'pos.retailPrice': 'रिटेल कीमत',
-    'pos.wholesalePrice': 'होलसेल कीमत',
+    'pos.customerName': 'ग्राहक का नाम',
+    'pos.dateOfBirth': 'जन्म तिथि',
+    'pos.customerOptional': 'वैकल्पिक',
+    'pos.scanOrClick': 'स्कैन करें या क्लिक करके जोड़ें',
+    'pos.outOfStock': 'स्टॉक खत्म है!',
+    'pos.productOutOfStock': 'प्रोडक्ट स्टॉक में नहीं है!',
+    'pos.priceFallback': 'रिटेल कीमत लागू',
+    'pos.payment.cash': 'कैश',
+    'pos.payment.card': 'कार्ड',
+    'pos.payment.upi': 'यूपीआई',
+    'pos.allCategories': 'सभी श्रेणियाँ',
+    'pos.focusSearch': 'खोज पर जाएँ',
+    'pos.switchMode': 'मोड बदलें',
+    'pos.quickCheckout': 'त्वरित चेकआउट',
+    'pos.clearView': 'व्यू साफ़ करें',
+
     'inventory.title': 'इन्वेंटरी',
     'inventory.subtitle': 'प्रोडक्ट प्रबंधित करें',
+    'inventory.products': 'प्रोडक्ट्स',
+    'inventory.value': 'मूल्य',
+    'inventory.lowStock': 'कम स्टॉक',
+    'inventory.out': 'खत्म',
+    'inventory.template': 'टेम्पलेट',
     'inventory.addProduct': 'प्रोडक्ट जोड़ें',
+    'inventory.editProduct': 'प्रोडक्ट संपादित करें',
+    'inventory.searchPlaceholder': 'नाम या SKU से खोजें...',
+    'inventory.product': 'प्रोडक्ट',
+    'inventory.sku': 'SKU',
+    'inventory.category': 'श्रेणी',
+    'inventory.retailPrice': 'रिटेल',
+    'inventory.wholesalePrice': 'होलसेल',
+    'inventory.costPrice': 'लागत',
+    'inventory.actions': 'कार्य',
+    'inventory.loading': 'लोड हो रहा है...',
+    'inventory.adjustFilters': 'फ़िल्टर बदलकर देखें।',
+    'inventory.updateDetails': 'विवरण अपडेट करें',
+    'inventory.enterInformation': 'जानकारी दर्ज करें',
+    'inventory.skuBarcode': 'SKU / बारकोड',
+    'inventory.productName': 'प्रोडक्ट नाम',
+    'inventory.generateAuto': 'ऑटो',
+    'inventory.stockStatus.out': 'खत्म',
+    'inventory.importProducts': 'प्रोडक्ट इम्पोर्ट करें',
+    'inventory.importHint': 'इन्वेंटरी को bulk में इम्पोर्ट करने के लिए CSV अपलोड करें।',
+    'inventory.clickToUpload': 'अपलोड करने के लिए क्लिक करें',
+    'inventory.dragAndDrop': 'या ड्रैग और ड्रॉप करें',
+    'inventory.csvOnly': 'केवल CSV फाइलें',
+    'inventory.importData': 'डेटा इम्पोर्ट करें',
+    'inventory.importing': 'इम्पोर्ट हो रहा है...',
+    'inventory.productsCount': '{shown} में से {total} प्रोडक्ट्स',
+    'inventory.enterSku': 'SKU दर्ज करें',
+    'inventory.enterName': 'नाम दर्ज करें',
+    'inventory.categoryOptional': 'श्रेणी (वैकल्पिक)',
+    'inventory.printBarcode': 'बारकोड प्रिंट करें',
+
     'history.title': 'लेनदेन इतिहास',
-    'history.subtitle': 'रसीद देखें और दोबारा प्रिंट करें',
+    'history.subtitle': 'रसीदें देखें और दोबारा प्रिंट करें',
+    'history.searchPlaceholder': 'ID से खोजें...',
+    'history.total': 'कुल',
+    'history.today': 'आज',
+    'history.average': 'औसत',
+    'history.showing': 'दिखाया जा रहा',
+    'history.filtered': 'फ़िल्टर किया गया',
+    'history.orders': 'ऑर्डर',
+    'history.perOrder': 'प्रति ऑर्डर',
+    'history.order': 'ऑर्डर',
+    'history.dateTime': 'तारीख और समय',
+    'history.payment': 'भुगतान',
+    'history.amount': 'राशि',
+    'history.view': 'देखें',
+    'history.print': 'प्रिंट',
+    'history.allPayments': 'सभी भुगतान',
+    'history.each': 'प्रति',
+    'history.transactionsCount': '{shown} में से {total} ट्रांजैक्शन',
+    'history.unknown': 'अज्ञात',
+
     'vendors.title': 'वेंडर प्रबंधन',
     'vendors.subtitle': 'खरीद और भुगतान ट्रैक करें',
+    'vendors.allSummary': 'सभी वेंडर्स (सारांश)',
+    'vendors.selectVendor': 'वेंडर चुनें',
+    'vendors.addTransaction': 'ट्रांजैक्शन जोड़ें',
+    'vendors.records': 'रिकॉर्ड्स',
+    'vendors.totalPurchase': 'कुल खरीद',
+    'vendors.totalPaid': 'कुल भुगतान',
+    'vendors.pending': 'बाकी',
+    'vendors.paid': 'भुगतान हो गया',
+    'vendors.searchPlaceholder': 'वेंडर नाम या नोट्स से खोजें...',
+    'vendors.allTime': 'संपूर्ण समय',
+    'vendors.today': 'आज',
+    'vendors.week': 'सप्ताह',
+    'vendors.month': 'महीना',
+    'vendors.noRecords': 'कोई वेंडर रिकॉर्ड नहीं मिला',
+    'vendors.addFirstRecord': 'अपना पहला वेंडर रिकॉर्ड जोड़ें।',
+    'vendors.noProfiles': 'कोई वेंडर प्रोफाइल नहीं मिला।',
+    'vendors.addVendorProfile': 'नई वेंडर प्रोफाइल जोड़ें',
+    'vendors.editRecord': 'वेंडर रिकॉर्ड संपादित करें',
+    'vendors.addRecord': 'वेंडर रिकॉर्ड जोड़ें',
+    'vendors.updateDetails': 'विवरण अपडेट करें',
+    'vendors.enterVendorInformation': 'वेंडर जानकारी दर्ज करें',
+    'vendors.vendor': 'वेंडर',
+    'vendors.selectVendorOption': 'वेंडर चुनें',
+    'vendors.addNewVendor': 'नया वेंडर जोड़ें',
+    'vendors.date': 'तारीख',
+    'vendors.purchaseDetails': 'खरीद विवरण',
+    'vendors.purchaseBillImage': 'खरीद बिल इमेज',
+    'vendors.paymentDetails': 'भुगतान विवरण',
+    'vendors.paymentBillImage': 'भुगतान बिल इमेज',
+    'vendors.uploadImage': 'इमेज अपलोड करें',
+    'vendors.changeImage': 'इमेज बदलें',
+    'vendors.purchaseAmount': 'खरीद राशि',
+    'vendors.paymentAmount': 'भुगतान राशि',
+    'vendors.totalAmount': 'कुल राशि',
+    'vendors.paidAmount': 'भुगतान राशि',
+    'vendors.pendingAmount': 'बाकी राशि',
+    'vendors.notes': 'नोट्स',
+    'vendors.optionalNotes': 'वैकल्पिक नोट्स...',
+    'vendors.vendorName': 'वेंडर नाम',
+    'vendors.contactNumber': 'संपर्क नंबर',
+    'vendors.location': 'स्थान',
+    'vendors.businessOrPersonName': 'व्यवसाय या व्यक्ति का नाम',
+    'vendors.createVendor': 'वेंडर बनाएँ',
+    'vendors.recordsCount': '{shown} में से {total} रिकॉर्ड्स',
+
     'dashboard.title': 'डैशबोर्ड',
-    'dashboard.subtitle': 'बिज़नेस ओवरव्यू',
-    'barcode.title': 'बारकोड स्टूडियो',
-    'barcode.subtitle': 'साफ बारकोड लेबल प्रिंट करें',
-    'receipt.customer': 'ग्राहक',
-    'receipt.subtotal': 'उप-योग',
+    'dashboard.subtitle': 'व्यवसाय अवलोकन',
+    'dashboard.live': 'लाइव',
+    'dashboard.sales': 'बिक्री',
+    'dashboard.today': 'आज',
+    'dashboard.total': 'कुल',
+    'dashboard.transactions': 'लेनदेन',
+    'dashboard.allTime': 'संपूर्ण समय',
+    'dashboard.lowStock': 'कम स्टॉक',
+    'dashboard.needRestock': 'रीस्टॉक आवश्यक',
+    'dashboard.allStocked': 'सभी स्टॉक में',
+    'dashboard.profit': 'लाभ',
+    'dashboard.salesTrend': 'बिक्री ट्रेंड',
+    'dashboard.last7Days': 'पिछले 7 दिन',
+    'dashboard.revenue': 'राजस्व',
+    'dashboard.loading': 'डैशबोर्ड लोड हो रहा है...',
+    'dashboard.unavailable': 'डैशबोर्ड डेटा लोड नहीं हो सका',
+    'dashboard.startTransaction': 'ट्रांजैक्शन शुरू करें',
+    'dashboard.manageProducts': 'प्रोडक्ट प्रबंधित करें',
+    'dashboard.viewTransactions': 'लेनदेन देखें',
+
+    'barcode.title': 'बारकोड लेबल',
+    'barcode.subtitle': 'कॉम्पैक्ट लेबल सेटअप, लाइव मॉकअप और सेव किए गए बारकोड कार्ड्स।',
+    'barcode.savedCount': '{count}/{limit} सेव',
+    'barcode.liveMockup': 'लाइव मॉकअप',
+    'barcode.searchOrEnterSku': 'SKU खोजें या दर्ज करें',
+    'barcode.openingPrint': 'प्रिंट खुल रहा है...',
+    'barcode.printLabel': 'लेबल प्रिंट करें',
+    'barcode.searchProduct': 'प्रोडक्ट खोजें',
+    'barcode.skuOrName': 'SKU या प्रोडक्ट नाम...',
+    'barcode.searching': 'खोजा जा रहा है...',
+    'barcode.noProductsFound': 'कोई प्रोडक्ट नहीं मिला',
+    'barcode.sku': 'SKU',
+    'barcode.productTitle': 'प्रोडक्ट शीर्षक',
+    'barcode.priceType': 'प्राइस टाइप',
+    'barcode.price': 'कीमत ({currency})',
+    'barcode.qty': 'मात्रा',
+    'barcode.storeLabel': 'स्टोर लेबल',
+    'barcode.showStoreName': 'स्टोर नाम दिखाएँ',
+    'barcode.showTitle': 'शीर्षक दिखाएँ',
+    'barcode.saveBarcode': 'बारकोड सेव करें',
+    'barcode.savedBarcodes': 'सेव बारकोड्स',
+    'barcode.loadSavedHint': 'किसी भी सेव कार्ड को लाइव मॉकअप में लोड करें।',
+    'barcode.maxCount': 'अधिकतम {limit}',
+    'barcode.noSavedBarcodes': 'अभी तक कोई सेव बारकोड नहीं',
+    'barcode.createAndSaveHint': 'बाएँ तरफ लेबल बनाइए और Save Barcode दबाइए।',
+    'barcode.loadToMockup': 'मॉकअप में लोड करें',
+    'barcode.savedOn': 'सेव',
+    'barcode.skuRequiredSave': 'सेव करने से पहले SKU ज़रूरी है।',
+    'barcode.skuRequiredPrint': 'प्रिंट करने से पहले SKU ज़रूरी है।',
+    'barcode.loadedMockup': 'मॉकअप में लोड किया गया',
+    'barcode.printDialogOpened': 'प्रिंट डायलॉग खुल गया',
+    'barcode.printFailed': 'प्रिंट असफल रहा।',
+    'barcode.savedStatus': 'सेव हो गया। {count} में से {limit} स्लॉट उपयोग में हैं।',
+    'barcode.retail': 'रिटेल',
+    'barcode.wholesale': 'होलसेल',
+    'barcode.untitledProduct': 'बिना नाम का प्रोडक्ट',
+    'barcode.type': 'प्रकार',
+
+    'receipt.subtotal': 'सबटोटल',
+    'receipt.tax': 'टैक्स ({rate}%)',
+    'receipt.total': 'कुल',
+
+    'time.today': 'आज',
+    'time.yesterday': 'कल',
 };
 
 const mr: Partial<TranslationTable> = {
     'common.add': 'जोडा',
+    'common.all': 'सर्व',
+    'common.backup': 'बॅकअप',
     'common.cancel': 'रद्द करा',
-    'common.save': 'सेटिंग्ज सेव्ह करा',
+    'common.close': 'बंद करा',
+    'common.delete': 'हटवा',
+    'common.export': 'एक्सपोर्ट',
+    'common.hidden': 'लपविलेले',
+    'common.import': 'इम्पोर्ट',
+    'common.loading': 'लोड होत आहे...',
+    'common.name': 'नाव',
+    'common.next': 'पुढे',
+    'common.phone': 'फोन',
+    'common.preview': 'पूर्वदृश्य',
+    'common.prev': 'मागे',
+    'common.print': 'प्रिंट',
+    'common.ready': 'तयार',
+    'common.restore': 'रीस्टोर',
+    'common.save': 'सेटिंग्ज सेव करा',
+    'common.saved': 'सेव झाले',
+    'common.saving': 'सेव होत आहे...',
+    'common.stock': 'स्टॉक',
+    'common.total': 'एकूण',
+    'common.update': 'अपडेट',
+    'common.visible': 'दाखवा',
+
     'layout.dashboard': 'डॅशबोर्ड',
+    'layout.pos': 'पीओएस',
     'layout.inventory': 'इन्व्हेंटरी',
+    'layout.vendors': 'विक्रेते',
     'layout.history': 'इतिहास',
+    'layout.barcode': 'बारकोड',
     'layout.settings': 'सेटिंग्ज',
+
     'settings.title': 'स्टोअर सेटिंग्ज',
-    'settings.defaultBillingMode': 'डीफॉल्ट बिलिंग मोड',
-    'settings.retail': 'रिटेल',
-    'settings.wholesale': 'घाऊक',
+    'settings.subtitle': 'प्रिंटर, भाषा, मॉड्यूल आणि बिलिंग डिफॉल्ट सेट करा',
+    'settings.storeIdentity': 'स्टोअर माहिती',
+    'settings.storeName': 'स्टोअर नाव',
+    'settings.address': 'पत्ता',
+    'settings.receiptFooter': 'रसीद फूटर',
+    'settings.printerRouting': 'प्रिंटर रूटिंग',
+    'settings.billPrinter': 'बिल प्रिंटर',
+    'settings.barcodePrinter': 'बारकोड प्रिंटर',
+    'settings.selectBillPrinter': 'बिल प्रिंटर निवडा',
+    'settings.selectBarcodePrinter': 'बारकोड प्रिंटर निवडा',
+    'settings.thermalBillSize': 'थर्मल बिल साइज',
+    'settings.compactCounterBill': 'कॉम्पॅक्ट काउंटर बिल',
+    'settings.widerLayout': 'मोठा लेआउट',
+    'settings.appearanceBilling': 'दिसणे आणि बिलिंग',
+    'settings.theme': 'थीम',
+    'settings.system': 'सिस्टम',
+    'settings.light': 'लाईट',
+    'settings.dark': 'डार्क',
+    'settings.themeHint': 'सेटिंग्ज सेव केल्यानंतर थीम लागू होईल',
+    'settings.taxRate': 'कर दर (%)',
+    'settings.taxOn': 'कर सुरू',
+    'settings.taxOff': 'कर बंद',
+    'settings.currency': 'चलन',
+    'settings.modulesLanguage': 'मॉड्यूल आणि भाषा',
     'settings.language': 'भाषा',
+    'settings.languageHint': 'हे अॅपमधील मुख्य इंटरफेसचे भाषांतर करते.',
+    'settings.defaultBillingMode': 'डिफॉल्ट बिलिंग मोड',
+    'settings.defaultBillingModeHint': 'पीओएस हा प्राइसिंग मोड वापरून उघडेल.',
+    'settings.vendorsPage': 'विक्रेते पृष्ठ',
+    'settings.vendorsPageHint': 'साइडबार आणि रूटमधून विक्रेता व्यवस्थापन दाखवा किंवा लपवा.',
+    'settings.receiptPreview': 'थर्मल रसीद पूर्वदृश्य',
+    'settings.receiptPreviewPaper': '{paper} पेपर',
+    'settings.dataManagement': 'डेटा व्यवस्थापन',
+    'settings.deleteHistory': 'इतिहास हटवा',
+    'settings.deleteHistoryHint': 'ट्रांजॅक्शन इतिहास हटवल्यास जुने बिल रेकॉर्ड कायमचे हटतील.',
+    'settings.confirmDelete': 'हटवण्याची खात्री करा',
+    'settings.cannotUndo': 'ही क्रिया पूर्ववत करता येणार नाही.',
+    'settings.retail': 'रिटेल',
+    'settings.wholesale': 'होलसेल',
+    'settings.english': 'इंग्रजी',
+    'settings.hindi': 'हिंदी',
+    'settings.marathi': 'मराठी',
+    'settings.bengali': 'बंगाली',
+    'settings.gujarati': 'गुजराती',
+
     'pos.title': 'पीओएस टर्मिनल',
+    'pos.searchPlaceholder': 'नाव किंवा SKU ने शोधा...',
+    'pos.order': 'ऑर्डर',
+    'pos.productsEmpty': 'कोणतेही प्रोडक्ट सापडले नाही',
+    'pos.cartEmpty': 'कार्ट रिकामी आहे',
+    'pos.addCustomer': 'ग्राहक जोडा',
+    'pos.noPhone': 'फोन नाही',
+    'pos.extraDiscount': 'अतिरिक्त सूट',
+    'pos.checkout': 'चेकआउट',
+    'pos.printCheckout': 'प्रिंट आणि चेकआउट',
+    'pos.transactionRecorded': 'व्यवहार नोंदवला गेला',
+    'pos.success': 'यशस्वी!',
+    'pos.customerName': 'ग्राहक नाव',
+    'pos.dateOfBirth': 'जन्मतारीख',
+    'pos.customerOptional': 'ऐच्छिक',
+    'pos.scanOrClick': 'स्कॅन करा किंवा क्लिक करून जोडा',
+    'pos.outOfStock': 'स्टॉक संपला!',
+    'pos.productOutOfStock': 'प्रोडक्ट स्टॉकमध्ये नाही!',
+    'pos.priceFallback': 'रिटेल किंमत वापरली',
+    'pos.payment.cash': 'रोख',
+    'pos.payment.card': 'कार्ड',
+    'pos.payment.upi': 'यूपीआय',
+    'pos.allCategories': 'सर्व श्रेणी',
+    'pos.focusSearch': 'शोधावर जा',
+    'pos.switchMode': 'मोड बदला',
+    'pos.quickCheckout': 'जलद चेकआउट',
+    'pos.clearView': 'व्ह्यू साफ करा',
+
     'inventory.title': 'इन्व्हेंटरी',
+    'inventory.subtitle': 'प्रोडक्ट व्यवस्थापित करा',
+    'inventory.products': 'प्रोडक्ट्स',
+    'inventory.value': 'मूल्य',
+    'inventory.lowStock': 'कमी स्टॉक',
+    'inventory.out': 'संपले',
+    'inventory.template': 'टेम्पलेट',
+    'inventory.addProduct': 'प्रोडक्ट जोडा',
+    'inventory.editProduct': 'प्रोडक्ट संपादित करा',
+    'inventory.searchPlaceholder': 'नाव किंवा SKU ने शोधा...',
+    'inventory.product': 'प्रोडक्ट',
+    'inventory.sku': 'SKU',
+    'inventory.category': 'श्रेणी',
+    'inventory.retailPrice': 'रिटेल',
+    'inventory.wholesalePrice': 'होलसेल',
+    'inventory.costPrice': 'किंमत',
+    'inventory.actions': 'क्रिया',
+    'inventory.loading': 'लोड होत आहे...',
+    'inventory.adjustFilters': 'फिल्टर बदलून पाहा.',
+    'inventory.updateDetails': 'तपशील अपडेट करा',
+    'inventory.enterInformation': 'माहिती भरा',
+    'inventory.skuBarcode': 'SKU / बारकोड',
+    'inventory.productName': 'प्रोडक्ट नाव',
+    'inventory.generateAuto': 'ऑटो',
+    'inventory.stockStatus.out': 'संपले',
+    'inventory.importProducts': 'प्रोडक्ट इम्पोर्ट करा',
+    'inventory.importHint': 'इन्व्हेंटरी bulk मध्ये इम्पोर्ट करण्यासाठी CSV अपलोड करा.',
+    'inventory.clickToUpload': 'अपलोड करण्यासाठी क्लिक करा',
+    'inventory.dragAndDrop': 'किंवा ड्रॅग आणि ड्रॉप करा',
+    'inventory.csvOnly': 'फक्त CSV फाईल्स',
+    'inventory.importData': 'डेटा इम्पोर्ट करा',
+    'inventory.importing': 'इम्पोर्ट होत आहे...',
+    'inventory.productsCount': '{shown} पैकी {total} प्रोडक्ट्स',
+    'inventory.enterSku': 'SKU भरा',
+    'inventory.enterName': 'नाव भरा',
+    'inventory.categoryOptional': 'श्रेणी (ऐच्छिक)',
+    'inventory.printBarcode': 'बारकोड प्रिंट करा',
+
     'history.title': 'व्यवहार इतिहास',
+    'history.subtitle': 'रसीद पहा आणि पुन्हा प्रिंट करा',
+    'history.searchPlaceholder': 'ID ने शोधा...',
+    'history.total': 'एकूण',
+    'history.today': 'आज',
+    'history.average': 'सरासरी',
+    'history.showing': 'दाखवलेले',
+    'history.filtered': 'फिल्टर केलेले',
+    'history.orders': 'ऑर्डर्स',
+    'history.perOrder': 'प्रति ऑर्डर',
+    'history.order': 'ऑर्डर',
+    'history.dateTime': 'तारीख आणि वेळ',
+    'history.payment': 'पेमेंट',
+    'history.amount': 'रक्कम',
+    'history.view': 'पहा',
+    'history.print': 'प्रिंट',
+    'history.allPayments': 'सर्व पेमेंट्स',
+    'history.each': 'प्रति',
+    'history.transactionsCount': '{shown} पैकी {total} व्यवहार',
+    'history.unknown': 'अज्ञात',
+
     'vendors.title': 'विक्रेता व्यवस्थापन',
+    'vendors.subtitle': 'खरेदी आणि पेमेंट ट्रॅक करा',
+    'vendors.allSummary': 'सर्व विक्रेते (सारांश)',
+    'vendors.selectVendor': 'विक्रेता निवडा',
+    'vendors.addTransaction': 'व्यवहार जोडा',
+    'vendors.records': 'नोंदी',
+    'vendors.totalPurchase': 'एकूण खरेदी',
+    'vendors.totalPaid': 'एकूण भुगतान',
+    'vendors.pending': 'बाकी',
+    'vendors.paid': 'भरले',
+    'vendors.searchPlaceholder': 'विक्रेता नाव किंवा नोट्सने शोधा...',
+    'vendors.week': 'आठवडा',
+    'vendors.month': 'महिना',
+    'vendors.noRecords': 'कोणतीही विक्रेता नोंद सापडली नाही',
+    'vendors.addFirstRecord': 'तुमची पहिली विक्रेता नोंद जोडा.',
+    'vendors.noProfiles': 'कोणतीही विक्रेता प्रोफाइल सापडली नाही.',
+    'vendors.addVendorProfile': 'नवी विक्रेता प्रोफाइल जोडा',
+    'vendors.editRecord': 'विक्रेता नोंद संपादित करा',
+    'vendors.addRecord': 'विक्रेता नोंद जोडा',
+    'vendors.updateDetails': 'तपशील अपडेट करा',
+    'vendors.enterVendorInformation': 'विक्रेता माहिती भरा',
+    'vendors.vendor': 'विक्रेता',
+    'vendors.selectVendorOption': 'विक्रेता निवडा',
+    'vendors.addNewVendor': 'नवा विक्रेता जोडा',
+    'vendors.date': 'तारीख',
+    'vendors.purchaseDetails': 'खरेदी तपशील',
+    'vendors.purchaseBillImage': 'खरेदी बिल इमेज',
+    'vendors.paymentDetails': 'पेमेंट तपशील',
+    'vendors.paymentBillImage': 'पेमेंट बिल इमेज',
+    'vendors.uploadImage': 'इमेज अपलोड करा',
+    'vendors.changeImage': 'इमेज बदला',
+    'vendors.purchaseAmount': 'खरेदी रक्कम',
+    'vendors.paymentAmount': 'पेमेंट रक्कम',
+    'vendors.totalAmount': 'एकूण रक्कम',
+    'vendors.paidAmount': 'भरलेली रक्कम',
+    'vendors.pendingAmount': 'बाकी रक्कम',
+    'vendors.notes': 'नोट्स',
+    'vendors.optionalNotes': 'ऐच्छिक नोट्स...',
+    'vendors.vendorName': 'विक्रेता नाव',
+    'vendors.contactNumber': 'संपर्क क्रमांक',
+    'vendors.location': 'स्थान',
+    'vendors.businessOrPersonName': 'व्यवसाय किंवा व्यक्तीचे नाव',
+    'vendors.createVendor': 'विक्रेता तयार करा',
+    'vendors.recordsCount': '{shown} पैकी {total} नोंदी',
+
     'dashboard.title': 'डॅशबोर्ड',
-    'barcode.title': 'बारकोड स्टुडिओ',
+    'dashboard.subtitle': 'व्यवसाय आढावा',
+    'dashboard.live': 'लाइव्ह',
+    'dashboard.sales': 'विक्री',
+    'dashboard.today': 'आज',
+    'dashboard.total': 'एकूण',
+    'dashboard.transactions': 'व्यवहार',
+    'dashboard.allTime': 'संपूर्ण कालावधी',
+    'dashboard.lowStock': 'कमी स्टॉक',
+    'dashboard.needRestock': 'रीस्टॉक आवश्यक',
+    'dashboard.allStocked': 'सर्व स्टॉकमध्ये',
+    'dashboard.profit': 'नफा',
+    'dashboard.salesTrend': 'विक्री ट्रेंड',
+    'dashboard.last7Days': 'मागील 7 दिवस',
+    'dashboard.revenue': 'उत्पन्न',
+    'dashboard.loading': 'डॅशबोर्ड लोड होत आहे...',
+    'dashboard.unavailable': 'डॅशबोर्ड डेटा लोड होऊ शकला नाही',
+    'dashboard.startTransaction': 'व्यवहार सुरू करा',
+    'dashboard.manageProducts': 'प्रोडक्ट व्यवस्थापित करा',
+    'dashboard.viewTransactions': 'व्यवहार पहा',
+
+    'barcode.title': 'बारकोड लेबले',
+    'barcode.subtitle': 'कॉम्पॅक्ट लेबल सेटअप, लाइव्ह मॉकअप आणि सेव बारकोड कार्ड्स.',
+    'barcode.savedCount': '{count}/{limit} सेव',
+    'barcode.liveMockup': 'लाइव्ह मॉकअप',
+    'barcode.searchOrEnterSku': 'SKU शोधा किंवा भरा',
+    'barcode.openingPrint': 'प्रिंट उघडत आहे...',
+    'barcode.printLabel': 'लेबल प्रिंट करा',
+    'barcode.searchProduct': 'प्रोडक्ट शोधा',
+    'barcode.skuOrName': 'SKU किंवा प्रोडक्ट नाव...',
+    'barcode.searching': 'शोध सुरू आहे...',
+    'barcode.noProductsFound': 'कोणतेही प्रोडक्ट सापडले नाही',
+    'barcode.sku': 'SKU',
+    'barcode.productTitle': 'प्रोडक्ट शीर्षक',
+    'barcode.priceType': 'किंमत प्रकार',
+    'barcode.price': 'किंमत ({currency})',
+    'barcode.qty': 'प्रमाण',
+    'barcode.storeLabel': 'स्टोअर लेबल',
+    'barcode.showStoreName': 'स्टोअर नाव दाखवा',
+    'barcode.showTitle': 'शीर्षक दाखवा',
+    'barcode.saveBarcode': 'बारकोड सेव करा',
+    'barcode.savedBarcodes': 'सेव बारकोड्स',
+    'barcode.loadSavedHint': 'कोणतेही सेव कार्ड लाइव्ह मॉकअपमध्ये लोड करा.',
+    'barcode.maxCount': 'कमाल {limit}',
+    'barcode.noSavedBarcodes': 'अजून सेव बारकोड नाहीत',
+    'barcode.createAndSaveHint': 'डावीकडे लेबल तयार करा आणि Save Barcode दाबा.',
+    'barcode.loadToMockup': 'मॉकअपमध्ये लोड करा',
+    'barcode.savedOn': 'सेव',
+    'barcode.skuRequiredSave': 'सेव करण्यापूर्वी SKU आवश्यक आहे.',
+    'barcode.skuRequiredPrint': 'प्रिंट करण्यापूर्वी SKU आवश्यक आहे.',
+    'barcode.loadedMockup': 'मॉकअपमध्ये लोड केले',
+    'barcode.printDialogOpened': 'प्रिंट डायलॉग उघडला',
+    'barcode.printFailed': 'प्रिंट अयशस्वी.',
+    'barcode.savedStatus': 'सेव झाले. {count} पैकी {limit} स्लॉट वापरात आहेत.',
+    'barcode.retail': 'रिटेल',
+    'barcode.wholesale': 'होलसेल',
+    'barcode.untitledProduct': 'नाव नसलेले प्रोडक्ट',
+    'barcode.type': 'प्रकार',
+
+    'receipt.subtotal': 'सबटोटल',
+    'receipt.tax': 'कर ({rate}%)',
+    'receipt.total': 'एकूण',
+
+    'time.today': 'आज',
+    'time.yesterday': 'काल',
 };
 
 const bn: Partial<TranslationTable> = {
     'common.add': 'যোগ করুন',
-    'common.cancel': 'বাতিল করুন',
-    'common.save': 'সেটিংস সংরক্ষণ করুন',
+    'common.all': 'সব',
+    'common.backup': 'ব্যাকআপ',
+    'common.cancel': 'বাতিল',
+    'common.close': 'বন্ধ করুন',
+    'common.delete': 'মুছুন',
+    'common.export': 'এক্সপোর্ট',
+    'common.hidden': 'লুকানো',
+    'common.import': 'ইম্পোর্ট',
+    'common.loading': 'লোড হচ্ছে...',
+    'common.name': 'নাম',
+    'common.next': 'পরের',
+    'common.phone': 'ফোন',
+    'common.preview': 'প্রিভিউ',
+    'common.prev': 'আগের',
+    'common.print': 'প্রিন্ট',
+    'common.ready': 'প্রস্তুত',
+    'common.restore': 'রিস্টোর',
+    'common.save': 'সেটিংস সেভ করুন',
+    'common.saved': 'সেভ হয়েছে',
+    'common.saving': 'সেভ হচ্ছে...',
+    'common.stock': 'স্টক',
+    'common.total': 'মোট',
+    'common.update': 'আপডেট',
+    'common.visible': 'দেখান',
+
     'layout.dashboard': 'ড্যাশবোর্ড',
+    'layout.pos': 'পিওএস',
     'layout.inventory': 'ইনভেন্টরি',
+    'layout.vendors': 'ভেন্ডর',
     'layout.history': 'ইতিহাস',
+    'layout.barcode': 'বারকোড',
     'layout.settings': 'সেটিংস',
+
     'settings.title': 'স্টোর সেটিংস',
+    'settings.subtitle': 'প্রিন্টার, ভাষা, মডিউল এবং বিলিং ডিফল্ট কনফিগার করুন',
+    'settings.storeIdentity': 'স্টোর তথ্য',
+    'settings.storeName': 'স্টোরের নাম',
+    'settings.address': 'ঠিকানা',
+    'settings.receiptFooter': 'রিসিট ফুটার',
+    'settings.printerRouting': 'প্রিন্টার রাউটিং',
+    'settings.billPrinter': 'বিল প্রিন্টার',
+    'settings.barcodePrinter': 'বারকোড প্রিন্টার',
+    'settings.selectBillPrinter': 'বিল প্রিন্টার নির্বাচন করুন',
+    'settings.selectBarcodePrinter': 'বারকোড প্রিন্টার নির্বাচন করুন',
+    'settings.appearanceBilling': 'চেহারা ও বিলিং',
+    'settings.theme': 'থিম',
+    'settings.system': 'সিস্টেম',
+    'settings.light': 'লাইট',
+    'settings.dark': 'ডার্ক',
+    'settings.taxRate': 'ট্যাক্স রেট (%)',
+    'settings.taxOn': 'ট্যাক্স চালু',
+    'settings.taxOff': 'ট্যাক্স বন্ধ',
+    'settings.currency': 'মুদ্রা',
+    'settings.modulesLanguage': 'মডিউল ও ভাষা',
     'settings.language': 'ভাষা',
+    'settings.languageHint': 'এটি অ্যাপের প্রধান ইন্টারফেস অনুবাদ করে।',
     'settings.defaultBillingMode': 'ডিফল্ট বিলিং মোড',
+    'settings.vendorsPage': 'ভেন্ডর পেজ',
+    'settings.receiptPreview': 'থার্মাল রিসিট প্রিভিউ',
+    'settings.dataManagement': 'ডেটা ম্যানেজমেন্ট',
+    'settings.deleteHistory': 'ইতিহাস মুছুন',
+    'settings.confirmDelete': 'মুছা নিশ্চিত করুন',
+    'settings.cannotUndo': 'এই কাজটি আর ফেরানো যাবে না।',
     'settings.retail': 'রিটেইল',
     'settings.wholesale': 'হোলসেল',
+    'settings.english': 'ইংরেজি',
+    'settings.hindi': 'হিন্দি',
+    'settings.marathi': 'মারাঠি',
+    'settings.bengali': 'বাংলা',
+    'settings.gujarati': 'গুজরাটি',
+    'settings.backupRestore': 'ব্যাকআপ ও রিস্টোর',
+    'settings.backingUp': 'ব্যাকআপ হচ্ছে...',
+    'settings.restoring': 'রিস্টোর হচ্ছে...',
+
     'pos.title': 'পিওএস টার্মিনাল',
+    'pos.searchPlaceholder': 'নাম বা SKU দিয়ে খুঁজুন...',
+    'pos.order': 'অর্ডার',
+    'pos.productsEmpty': 'কোনো পণ্য পাওয়া যায়নি',
+    'pos.cartEmpty': 'কার্ট খালি',
+    'pos.addCustomer': 'কাস্টমার যোগ করুন',
+    'pos.noPhone': 'ফোন নেই',
+    'pos.extraDiscount': 'অতিরিক্ত ছাড়',
+    'pos.checkout': 'চেকআউট',
+    'pos.printCheckout': 'প্রিন্ট ও চেকআউট',
+    'pos.transactionRecorded': 'ট্রানজ্যাকশন সংরক্ষিত হয়েছে',
+    'pos.success': 'সফল!',
+    'pos.customerName': 'কাস্টমারের নাম',
+    'pos.dateOfBirth': 'জন্মতারিখ',
+    'pos.customerOptional': 'ঐচ্ছিক',
+    'pos.scanOrClick': 'স্ক্যান করুন বা ক্লিক করে যোগ করুন',
+    'pos.outOfStock': 'স্টক নেই!',
+    'pos.productOutOfStock': 'পণ্য স্টকে নেই!',
+    'pos.payment.cash': 'ক্যাশ',
+    'pos.payment.card': 'কার্ড',
+    'pos.payment.upi': 'ইউপিআই',
+    'pos.allCategories': 'সব ক্যাটাগরি',
+
     'inventory.title': 'ইনভেন্টরি',
+    'inventory.subtitle': 'পণ্য পরিচালনা করুন',
+    'inventory.products': 'পণ্য',
+    'inventory.value': 'মূল্য',
+    'inventory.lowStock': 'কম স্টক',
+    'inventory.out': 'শেষ',
+    'inventory.template': 'টেমপ্লেট',
+    'inventory.addProduct': 'পণ্য যোগ করুন',
+    'inventory.editProduct': 'পণ্য সম্পাদনা করুন',
+    'inventory.searchPlaceholder': 'নাম বা SKU দিয়ে খুঁজুন...',
+    'inventory.product': 'পণ্য',
+    'inventory.sku': 'SKU',
+    'inventory.category': 'ক্যাটাগরি',
+    'inventory.retailPrice': 'রিটেইল',
+    'inventory.wholesalePrice': 'হোলসেল',
+    'inventory.costPrice': 'খরচ',
+    'inventory.actions': 'অ্যাকশন',
+    'inventory.loading': 'লোড হচ্ছে...',
+    'inventory.importProducts': 'পণ্য ইম্পোর্ট করুন',
+    'inventory.importData': 'ডেটা ইম্পোর্ট করুন',
+    'inventory.importing': 'ইম্পোর্ট হচ্ছে...',
+    'inventory.productsCount': '{shown} এর মধ্যে {total} পণ্য',
+    'inventory.enterSku': 'SKU লিখুন',
+    'inventory.enterName': 'নাম লিখুন',
+
     'history.title': 'লেনদেনের ইতিহাস',
+    'history.subtitle': 'রিসিট দেখুন ও আবার প্রিন্ট করুন',
+    'history.searchPlaceholder': 'ID দিয়ে খুঁজুন...',
+    'history.total': 'মোট',
+    'history.today': 'আজ',
+    'history.average': 'গড়',
+    'history.showing': 'দেখানো হচ্ছে',
+    'history.filtered': 'ফিল্টার করা',
+    'history.orders': 'অর্ডার',
+    'history.perOrder': 'প্রতি অর্ডার',
+    'history.order': 'অর্ডার',
+    'history.dateTime': 'তারিখ ও সময়',
+    'history.payment': 'পেমেন্ট',
+    'history.amount': 'পরিমাণ',
+    'history.view': 'দেখুন',
+    'history.print': 'প্রিন্ট',
+    'history.allPayments': 'সব পেমেন্ট',
+    'history.transactionsCount': '{shown} এর মধ্যে {total} লেনদেন',
+    'history.unknown': 'অজানা',
+
     'vendors.title': 'ভেন্ডর ম্যানেজমেন্ট',
+    'vendors.subtitle': 'ক্রয় ও পেমেন্ট ট্র্যাক করুন',
+    'vendors.addTransaction': 'লেনদেন যোগ করুন',
+    'vendors.records': 'রেকর্ড',
+    'vendors.totalPurchase': 'মোট ক্রয়',
+    'vendors.totalPaid': 'মোট পেমেন্ট',
+    'vendors.pending': 'বাকি',
+    'vendors.paid': 'পরিশোধিত',
+    'vendors.searchPlaceholder': 'ভেন্ডরের নাম বা নোট দিয়ে খুঁজুন...',
+    'vendors.noRecords': 'কোনো ভেন্ডর রেকর্ড পাওয়া যায়নি',
+    'vendors.addFirstRecord': 'প্রথম ভেন্ডর রেকর্ড যোগ করুন।',
+    'vendors.recordsCount': '{shown} এর মধ্যে {total} রেকর্ড',
+
     'dashboard.title': 'ড্যাশবোর্ড',
-    'barcode.title': 'বারকোড স্টুডিও',
+    'dashboard.subtitle': 'ব্যবসার সারাংশ',
+    'dashboard.live': 'লাইভ',
+    'dashboard.sales': 'বিক্রি',
+    'dashboard.today': 'আজ',
+    'dashboard.total': 'মোট',
+    'dashboard.transactions': 'লেনদেন',
+    'dashboard.lowStock': 'কম স্টক',
+    'dashboard.profit': 'লাভ',
+    'dashboard.salesTrend': 'বিক্রির ট্রেন্ড',
+    'dashboard.revenue': 'রাজস্ব',
+    'dashboard.loading': 'ড্যাশবোর্ড লোড হচ্ছে...',
+    'dashboard.unavailable': 'ড্যাশবোর্ড ডেটা লোড করা যায়নি',
+    'dashboard.startTransaction': 'লেনদেন শুরু করুন',
+    'dashboard.manageProducts': 'পণ্য পরিচালনা করুন',
+    'dashboard.viewTransactions': 'লেনদেন দেখুন',
+
+    'barcode.title': 'বারকোড লেবেল',
+    'barcode.subtitle': 'কমপ্যাক্ট লেবেল সেটআপ, লাইভ মকআপ এবং সেভ করা বারকোড কার্ড।',
+    'barcode.savedCount': '{count}/{limit} সেভ',
+    'barcode.liveMockup': 'লাইভ মকআপ',
+    'barcode.searchOrEnterSku': 'SKU খুঁজুন বা লিখুন',
+    'barcode.printLabel': 'লেবেল প্রিন্ট করুন',
+    'barcode.searchProduct': 'পণ্য খুঁজুন',
+    'barcode.skuOrName': 'SKU বা পণ্যের নাম...',
+    'barcode.searching': 'খোঁজা হচ্ছে...',
+    'barcode.noProductsFound': 'কোনো পণ্য পাওয়া যায়নি',
+    'barcode.productTitle': 'পণ্যের শিরোনাম',
+    'barcode.priceType': 'দামের ধরন',
+    'barcode.qty': 'পরিমাণ',
+    'barcode.storeLabel': 'স্টোর লেবেল',
+    'barcode.showStoreName': 'স্টোরের নাম দেখান',
+    'barcode.showTitle': 'শিরোনাম দেখান',
+    'barcode.saveBarcode': 'বারকোড সেভ করুন',
+    'barcode.savedBarcodes': 'সেভ করা বারকোড',
+    'barcode.loadSavedHint': 'যেকোনো সেভ করা কার্ড লাইভ মকআপে লোড করুন।',
+    'barcode.maxCount': 'সর্বোচ্চ {limit}',
+    'barcode.noSavedBarcodes': 'এখনও কোনো সেভ করা বারকোড নেই',
+    'barcode.createAndSaveHint': 'বাম পাশে একটি লেবেল তৈরি করুন এবং Save Barcode চাপুন।',
+    'barcode.loadToMockup': 'মকআপে লোড করুন',
+    'barcode.retail': 'রিটেইল',
+    'barcode.wholesale': 'হোলসেল',
+    'barcode.untitledProduct': 'নামহীন পণ্য',
+    'barcode.type': 'ধরন',
+
+    'receipt.subtotal': 'সাবটোটাল',
+    'receipt.tax': 'ট্যাক্স ({rate}%)',
+    'receipt.total': 'মোট',
+
+    'time.today': 'আজ',
+    'time.yesterday': 'গতকাল',
 };
 
 const gu: Partial<TranslationTable> = {
     'common.add': 'ઉમેરો',
+    'common.all': 'બધા',
+    'common.backup': 'બેકઅપ',
     'common.cancel': 'રદ કરો',
+    'common.close': 'બંધ કરો',
+    'common.delete': 'કાઢી નાખો',
+    'common.export': 'એક્સપોર્ટ',
+    'common.hidden': 'છુપાયેલ',
+    'common.import': 'ઇમ્પોર્ટ',
+    'common.loading': 'લોડ થઈ રહ્યું છે...',
+    'common.name': 'નામ',
+    'common.next': 'આગળ',
+    'common.phone': 'ફોન',
+    'common.preview': 'પૂર્વદર્શન',
+    'common.prev': 'પાછળ',
+    'common.print': 'પ્રિન્ટ',
+    'common.ready': 'તૈયાર',
+    'common.restore': 'રીસ્ટોર',
     'common.save': 'સેટિંગ્સ સેવ કરો',
+    'common.saved': 'સેવ થયું',
+    'common.saving': 'સેવ થઈ રહ્યું છે...',
+    'common.stock': 'સ્ટોક',
+    'common.total': 'કુલ',
+    'common.update': 'અપડેટ',
+    'common.visible': 'બતાવો',
+
     'layout.dashboard': 'ડેશબોર્ડ',
+    'layout.pos': 'પીઓએસ',
     'layout.inventory': 'ઇન્વેન્ટરી',
+    'layout.vendors': 'વેન્ડર્સ',
     'layout.history': 'ઇતિહાસ',
+    'layout.barcode': 'બારકોડ',
     'layout.settings': 'સેટિંગ્સ',
+
     'settings.title': 'સ્ટોર સેટિંગ્સ',
+    'settings.subtitle': 'પ્રિન્ટર, ભાષા, મોડ્યૂલ અને બિલિંગ ડિફોલ્ટ ગોઠવો',
+    'settings.storeIdentity': 'સ્ટોર માહિતી',
+    'settings.storeName': 'સ્ટોર નામ',
+    'settings.address': 'સરનામું',
+    'settings.receiptFooter': 'રસીદ ફૂટર',
+    'settings.printerRouting': 'પ્રિન્ટર રૂટિંગ',
+    'settings.billPrinter': 'બિલ પ્રિન્ટર',
+    'settings.barcodePrinter': 'બારકોડ પ્રિન્ટર',
+    'settings.selectBillPrinter': 'બિલ પ્રિન્ટર પસંદ કરો',
+    'settings.selectBarcodePrinter': 'બારકોડ પ્રિન્ટર પસંદ કરો',
+    'settings.appearanceBilling': 'દેખાવ અને બિલિંગ',
+    'settings.theme': 'થીમ',
+    'settings.system': 'સિસ્ટમ',
+    'settings.light': 'લાઇટ',
+    'settings.dark': 'ડાર્ક',
+    'settings.taxRate': 'ટેક્સ દર (%)',
+    'settings.taxOn': 'ટેક્સ ચાલુ',
+    'settings.taxOff': 'ટેક્સ બંધ',
+    'settings.currency': 'ચલણ',
+    'settings.modulesLanguage': 'મોડ્યૂલ અને ભાષા',
     'settings.language': 'ભાષા',
-    'settings.defaultBillingMode': 'ડિફૉલ્ટ બિલિંગ મોડ',
+    'settings.defaultBillingMode': 'ડિફોલ્ટ બિલિંગ મોડ',
+    'settings.vendorsPage': 'વેન્ડર્સ પેજ',
+    'settings.receiptPreview': 'થર્મલ રસીદ પૂર્વદર્શન',
+    'settings.dataManagement': 'ડેટા મેનેજમેન્ટ',
+    'settings.deleteHistory': 'ઇતિહાસ કાઢી નાખો',
+    'settings.confirmDelete': 'કાઢી નાખવાની ખાતરી કરો',
+    'settings.cannotUndo': 'આ ક્રિયા પાછી ફેરવી શકાતી નથી.',
     'settings.retail': 'રિટેલ',
-    'settings.wholesale': 'થોક',
+    'settings.wholesale': 'હોલસેલ',
+    'settings.english': 'અંગ્રેજી',
+    'settings.hindi': 'હિન્દી',
+    'settings.marathi': 'મરાઠી',
+    'settings.bengali': 'બંગાળી',
+    'settings.gujarati': 'ગુજરાતી',
+    'settings.backupRestore': 'બેકઅપ અને રીસ્ટોર',
+    'settings.inventoryRestored': 'ઇન્વેન્ટરી ડેટા રીસ્ટોર થયું.',
+    'settings.historyRestored': 'ટ્રાન્ઝેક્શન ઇતિહાસ રીસ્ટોર થયો.',
+
     'pos.title': 'પીઓએસ ટર્મિનલ',
+    'pos.searchPlaceholder': 'નામ અથવા SKU થી શોધો...',
+    'pos.order': 'ઓર્ડર',
+    'pos.productsEmpty': 'કોઈ પ્રોડક્ટ મળ્યો નથી',
+    'pos.cartEmpty': 'કાર્ટ ખાલી છે',
+    'pos.addCustomer': 'ગ્રાહક ઉમેરો',
+    'pos.noPhone': 'ફોન નથી',
+    'pos.extraDiscount': 'વધારાની છૂટ',
+    'pos.checkout': 'ચેકઆઉટ',
+    'pos.printCheckout': 'પ્રિન્ટ અને ચેકઆઉટ',
+    'pos.transactionRecorded': 'ટ્રાન્ઝેક્શન નોંધાયું',
+    'pos.success': 'સફળ!',
+    'pos.customerName': 'ગ્રાહકનું નામ',
+    'pos.dateOfBirth': 'જન્મ તારીખ',
+    'pos.customerOptional': 'વૈકલ્પિક',
+    'pos.scanOrClick': 'સ્કેન કરો અથવા ક્લિક કરીને ઉમેરો',
+    'pos.outOfStock': 'સ્ટોકમાં નથી!',
+    'pos.productOutOfStock': 'પ્રોડક્ટ સ્ટોકમાં નથી!',
+    'pos.payment.cash': 'કેશ',
+    'pos.payment.card': 'કાર્ડ',
+    'pos.payment.upi': 'યુપીઆઈ',
+    'pos.allCategories': 'બધી કેટેગરી',
+
     'inventory.title': 'ઇન્વેન્ટરી',
+    'inventory.subtitle': 'પ્રોડક્ટ મેનેજ કરો',
+    'inventory.products': 'પ્રોડક્ટ્સ',
+    'inventory.value': 'મૂલ્ય',
+    'inventory.lowStock': 'ઓછો સ્ટોક',
+    'inventory.out': 'ખતમ',
+    'inventory.template': 'ટેમ્પ્લેટ',
+    'inventory.addProduct': 'પ્રોડક્ટ ઉમેરો',
+    'inventory.editProduct': 'પ્રોડક્ટ સંપાદિત કરો',
+    'inventory.searchPlaceholder': 'નામ અથવા SKU થી શોધો...',
+    'inventory.product': 'પ્રોડક્ટ',
+    'inventory.sku': 'SKU',
+    'inventory.category': 'કેટેગરી',
+    'inventory.retailPrice': 'રિટેલ',
+    'inventory.wholesalePrice': 'હોલસેલ',
+    'inventory.costPrice': 'કિંમત',
+    'inventory.actions': 'ક્રિયા',
+    'inventory.loading': 'લોડ થઈ રહ્યું છે...',
+    'inventory.importProducts': 'પ્રોડક્ટ ઇમ્પોર્ટ કરો',
+    'inventory.importData': 'ડેટા ઇમ્પોર્ટ કરો',
+    'inventory.importing': 'ઇમ્પોર્ટ થઈ રહ્યું છે...',
+    'inventory.productsCount': '{shown} માંથી {total} પ્રોડક્ટ્સ',
+
     'history.title': 'ટ્રાન્ઝેક્શન ઇતિહાસ',
-    'vendors.title': 'વિક્રेता મેનેજમેન્ટ',
+    'history.subtitle': 'રસીદ જુઓ અને ફરી પ્રિન્ટ કરો',
+    'history.searchPlaceholder': 'ID થી શોધો...',
+    'history.total': 'કુલ',
+    'history.today': 'આજે',
+    'history.average': 'સરેરાશ',
+    'history.showing': 'બતાવવામાં',
+    'history.filtered': 'ફિલ્ટર કરેલ',
+    'history.orders': 'ઓર્ડર્સ',
+    'history.perOrder': 'દર ઓર્ડર',
+    'history.order': 'ઓર્ડર',
+    'history.dateTime': 'તારીખ અને સમય',
+    'history.payment': 'ચુકવણી',
+    'history.amount': 'રકમ',
+    'history.view': 'જુઓ',
+    'history.print': 'પ્રિન્ટ',
+    'history.allPayments': 'બધી ચુકવણીઓ',
+    'history.transactionsCount': '{shown} માંથી {total} ટ્રાન્ઝેક્શન',
+    'history.unknown': 'અજ્ઞાત',
+
+    'vendors.title': 'વેન્ડર મેનેજમેન્ટ',
+    'vendors.subtitle': 'ખરીદી અને ચુકવણી ટ્રેક કરો',
+    'vendors.addTransaction': 'ટ્રાન્ઝેક્શન ઉમેરો',
+    'vendors.records': 'રેકોર્ડ્સ',
+    'vendors.totalPurchase': 'કુલ ખરીદી',
+    'vendors.totalPaid': 'કુલ ચુકવણી',
+    'vendors.pending': 'બાકી',
+    'vendors.paid': 'ચૂકવેલ',
+    'vendors.searchPlaceholder': 'વેન્ડરનું નામ અથવા નોંધથી શોધો...',
+    'vendors.noRecords': 'કોઈ વેન્ડર રેકોર્ડ મળ્યો નથી',
+    'vendors.addFirstRecord': 'તમારો પહેલો વેન્ડર રેકોર્ડ ઉમેરો.',
+    'vendors.recordsCount': '{shown} માંથી {total} રેકોર્ડ્સ',
+
     'dashboard.title': 'ડેશબોર્ડ',
-    'barcode.title': 'બારકોડ સ્ટુડિયો',
+    'dashboard.subtitle': 'વ્યવસાય સમીક્ષા',
+    'dashboard.live': 'લાઇવ',
+    'dashboard.sales': 'વેચાણ',
+    'dashboard.today': 'આજે',
+    'dashboard.total': 'કુલ',
+    'dashboard.transactions': 'ટ્રાન્ઝેક્શન',
+    'dashboard.lowStock': 'ઓછો સ્ટોક',
+    'dashboard.profit': 'નફો',
+    'dashboard.salesTrend': 'વેચાણ ટ્રેન્ડ',
+    'dashboard.revenue': 'આવક',
+    'dashboard.loading': 'ડેશબોર્ડ લોડ થઈ રહ્યું છે...',
+    'dashboard.unavailable': 'ડેશબોર્ડ ડેટા લોડ થઈ શક્યો નથી',
+    'dashboard.startTransaction': 'ટ્રાન્ઝેક્શન શરૂ કરો',
+    'dashboard.manageProducts': 'પ્રોડક્ટ મેનેજ કરો',
+    'dashboard.viewTransactions': 'ટ્રાન્ઝેક્શન જુઓ',
+
+    'barcode.title': 'બારકોડ લેબલ્સ',
+    'barcode.subtitle': 'કોમ્પેક્ટ લેબલ સેટઅપ, લાઇવ મૉકઅપ અને સેવ કરેલ બારકોડ કાર્ડ્સ.',
+    'barcode.savedCount': '{count}/{limit} સેવ',
+    'barcode.liveMockup': 'લાઇવ મૉકઅપ',
+    'barcode.searchOrEnterSku': 'SKU શોધો અથવા લખો',
+    'barcode.printLabel': 'લેબલ પ્રિન્ટ કરો',
+    'barcode.searchProduct': 'પ્રોડક્ટ શોધો',
+    'barcode.skuOrName': 'SKU અથવા પ્રોડક્ટ નામ...',
+    'barcode.searching': 'શોધી રહ્યા છીએ...',
+    'barcode.noProductsFound': 'કોઈ પ્રોડક્ટ મળ્યો નથી',
+    'barcode.productTitle': 'પ્રોડક્ટ શીર્ષક',
+    'barcode.priceType': 'ભાવ પ્રકાર',
+    'barcode.qty': 'જથ્થો',
+    'barcode.storeLabel': 'સ્ટોર લેબલ',
+    'barcode.showStoreName': 'સ્ટોર નામ બતાવો',
+    'barcode.showTitle': 'શીર્ષક બતાવો',
+    'barcode.saveBarcode': 'બારકોડ સેવ કરો',
+    'barcode.savedBarcodes': 'સેવ કરેલા બારકોડ્સ',
+    'barcode.loadSavedHint': 'કોઈપણ સેવ કરેલા કાર્ડને લાઇવ મૉકઅપમાં લોડ કરો.',
+    'barcode.maxCount': 'મહત્તમ {limit}',
+    'barcode.noSavedBarcodes': 'હજુ સુધી કોઈ સેવ કરેલા બારકોડ નથી',
+    'barcode.createAndSaveHint': 'ડાબી બાજુએ લેબલ બનાવો અને Save Barcode દબાવો.',
+    'barcode.loadToMockup': 'મૉકઅપમાં લોડ કરો',
+    'barcode.retail': 'રિટેલ',
+    'barcode.wholesale': 'હોલસેલ',
+    'barcode.untitledProduct': 'નામ વગરનો પ્રોડક્ટ',
+    'barcode.type': 'પ્રકાર',
+
+    'receipt.subtotal': 'સબટોટલ',
+    'receipt.tax': 'ટેક્સ ({rate}%)',
+    'receipt.total': 'કુલ',
+
+    'time.today': 'આજે',
+    'time.yesterday': 'ગઈકાલે',
 };
 
 const translations: Record<AppLanguage, Partial<TranslationTable>> = {
@@ -668,23 +1335,17 @@ const translations: Record<AppLanguage, Partial<TranslationTable>> = {
 };
 
 export function translate(language: AppLanguage, key: TranslationKey, values?: Record<string, string | number>) {
-    const table = translations[language] ?? translations.en;
-    let message = table[key] ?? translations.en[key] ?? key;
+    const template = translations[language]?.[key] ?? en[key] ?? key;
+    if (!values) return template;
 
-    if (!values) {
-        return message;
-    }
-
-    for (const [name, value] of Object.entries(values)) {
-        message = message.replaceAll(`{${name}}`, String(value));
-    }
-
-    return message;
+    return template.replace(/\{(\w+)\}/g, (_, placeholder: string) => {
+        const value = values[placeholder];
+        return value === undefined ? '' : String(value);
+    });
 }
 
 export function useI18n() {
     const language = useSettingsStore((state) => state.language);
-
     return {
         language,
         t: (key: TranslationKey, values?: Record<string, string | number>) => translate(language, key, values),

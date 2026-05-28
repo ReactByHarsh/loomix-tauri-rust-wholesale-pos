@@ -1,5 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { Key, RefreshCw, Wifi, AlertCircle } from 'lucide-react';
+import { LICENSE_CONTACT_EMAIL, LICENSE_CONTACT_PHONE } from '../licenseExpiry';
 
 interface ActivationPageProps {
     onActivated?: () => void;
@@ -120,6 +121,12 @@ export const ActivationPage = ({ onActivated }: ActivationPageProps) => {
                         <p className="text-[10px] text-zinc-600">
                             License validated online on every launch
                         </p>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-center text-[11px] text-zinc-400">
+                        <p className="font-semibold text-zinc-300">Need an activation key or reactivation?</p>
+                        <p className="mt-1">{LICENSE_CONTACT_EMAIL}</p>
+                        <p>{LICENSE_CONTACT_PHONE}</p>
                     </div>
                 </div>
             </div>

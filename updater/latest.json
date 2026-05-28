@@ -1,11 +1,11 @@
 {
-  "version": "0.2.0",
-  "notes": "Update to version 0.2.0",
-  "pub_date": "2026-05-18T15:21:42.354Z",
+  "version": "0.2.2",
+  "notes": "POS, Inventory, History, and Barcode layout fixes",
+  "pub_date": "2026-05-28T16:54:10.568Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUQ2g3NmFWbVJEeDhYSHdUS3UvcGlVaUtkOGYrSHBhSW9OeGxsam44c0w3djhtVlBrVkdnbXFBSFZEMmYvd3ljQUR5NXQxYm1WWTVuc3hvSW1yOSs0dzdpK0xwaGRqeWdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5MTE3MzcxCWZpbGU6bG9vbWl4XzAuMi4wX3g2NC1zZXR1cC5leGUKbG93ZGxobm5BczJ0R2VBOGpHUFRhTU5kSGtPZ1Rwd0EvRnIzUzlDT0RDRHZKeDBKdXBNOUJVa3VjalNlTGZHbFpBK1FzMGwxWlRaTEg5ZEcyU2NHQUE9PQo=",
-      "url": "https://pub-01cd1bbe8d8646d18ad3568dd4b68027.r2.dev/releases/0.2.0/nsis/loomix_0.2.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUQ2g3NmFWbVJEeDdDSzBUK3owbHp6eTF6bCtjQ052Z0ZqVTRjejNJWmM5a1U4d285MXViZ2xDaXdRTUlGclpEVmVrd0hzOENLWmpKYXFxdGNma205MGpLSVo5clNXSFE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc5OTg3MjQ5CWZpbGU6bG9vbWl4XzAuMi4yX3g2NC1zZXR1cC5leGUKUmZrREdvVFl3T3BSbjdzQWVhem9GRjVySzhpR2RkQkM0U3FDUUR0dEZMS1llQ1V5ZVBmVmhQQ0YvU2lMalZBb29ubk9RQ0gydzhIRzNMZVNGR0NBQkE9PQo=",
+      "url": "https://pub-01cd1bbe8d8646d18ad3568dd4b68027.r2.dev/releases/0.2.2/nsis/loomix_0.2.2_x64-setup.exe"
     }
   }
 }

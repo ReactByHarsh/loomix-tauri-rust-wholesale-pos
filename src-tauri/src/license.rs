@@ -7,11 +7,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::AppHandle;
 use tauri::Manager;
 
-const LICENSE_API_URL: &str = match option_env!("LICENSE_API_URL") {
-    Some(url) => url,
-    None => "https://electron-licensing-server.vercel.app/api/verify",
-};
 const SOFTWARE_TYPE: &str = "Loomix";
+const PRODUCTION_LICENSE_API_URL: &str =
+    "https://rust-licensing-server.yash-v-shinde.workers.dev/api/verify";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(8);
 const CLOCK_ROLLBACK_GRACE_MS: u64 = 60 * 60 * 1000;
 
@@ -117,6 +115,14 @@ impl LicenseManager {
         key.trim().to_ascii_uppercase()
     }
 
+    fn license_api_url() -> &'static str {
+        option_env!("LICENSE_API_URL").unwrap_or(if cfg!(debug_assertions) {
+            "http://127.0.0.1:8787/api/verify"
+        } else {
+            PRODUCTION_LICENSE_API_URL
+        })
+    }
+
     fn mark_invalid(&self, status: &str) {
         let mut data = self.load();
         data.status = status.to_string();
@@ -199,7 +205,7 @@ impl LicenseManager {
         });
 
         let response = client
-            .post(LICENSE_API_URL)
+            .post(Self::license_api_url())
             .json(&body)
             .send()
             .await

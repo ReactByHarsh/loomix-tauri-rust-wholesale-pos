@@ -120,15 +120,17 @@ export function VendorsPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             setCurrentPage(1);
-            fetchVendors();
         }, 300);
         return () => clearTimeout(timer);
     }, [search, dateFilter, selectedProfileId]);
 
     useEffect(() => {
-        fetchVendors();
-        fetchStats();
-    }, [currentPage, selectedProfileId]); // Add selectedProfileId here to refresh stats too
+        void fetchVendors();
+    }, [currentPage, search, dateFilter, selectedProfileId]);
+
+    useEffect(() => {
+        void fetchStats();
+    }, [selectedProfileId]);
 
     const handleAddProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -275,13 +277,14 @@ export function VendorsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-zinc-100 dark:bg-zinc-900">
+        <div className="flex h-full flex-col overscroll-contain bg-zinc-100 dark:bg-zinc-900">
             {/* Compact Header */}
             <div className="sticky top-0 z-20 shrink-0 border-b border-zinc-200 bg-white/95 p-4 backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/95">
-                <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="mx-auto w-full max-w-[1900px]">
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-700 rounded-lg">
-                            <Truck size={18} className="text-zinc-700 dark:text-zinc-300" />
+                        <div className="rounded-xl bg-slate-950 p-2 text-white shadow-sm dark:bg-white dark:text-zinc-950">
+                            <Truck size={18} />
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{t('vendors.title')}</h1>
@@ -291,7 +294,7 @@ export function VendorsPage() {
                 </div>
 
                 {/* Vendor Selection Bar */}
-                <div className="flex items-center gap-3 mb-4 bg-zinc-50 dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-700 dark:bg-zinc-900">
                     <div className="relative flex-1">
                         <button
                             onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
@@ -335,14 +338,14 @@ export function VendorsPage() {
                                     ))}
                                     {profiles.length === 0 && (
                                         <div className="px-3 py-4 text-center text-xs text-zinc-500">
-                                            No vendor profiles found.
+                                            {t('vendors.noProfiles')}
                                         </div>
                                     )}
                                 </div>
                             </>
                         )}
                     </div>
-                    <button onClick={() => setShowAddProfile(true)} className="p-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded-lg text-zinc-700 dark:text-zinc-300" title="Add New Vendor Profile">
+                    <button onClick={() => setShowAddProfile(true)} className="p-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded-lg text-zinc-700 dark:text-zinc-300" title={t('vendors.addVendorProfile')}>
                         <UserPlus size={16} />
                     </button>
                     <div className="h-4 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
@@ -360,7 +363,7 @@ export function VendorsPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="mb-3 grid grid-cols-2 gap-2 2xl:grid-cols-4">
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('vendors.records')}</span>
@@ -392,8 +395,8 @@ export function VendorsPage() {
                 </div>
 
                 {/* Search & Filter */}
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
+                <div className="flex flex-wrap gap-2">
+                    <div className="relative min-w-[240px] flex-1">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <input type="text" placeholder={t('vendors.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)}
                             className="w-full pl-9 pr-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm" />
@@ -409,11 +412,12 @@ export function VendorsPage() {
                         </select>
                     </div>
                 </div>
+                </div>
             </div>
 
             {/* Table */}
             <div className="flex-1 overflow-y-auto p-4">
-                <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col h-full">
+                <div className="mx-auto flex h-full w-full max-w-[1900px] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
                     {isLoading ? (
                         <div className="p-8 flex flex-col items-center justify-center">
                             <div className="w-8 h-8 border-3 border-zinc-300 border-t-violet-600 dark:border-zinc-600 dark:border-t-violet-400 rounded-full animate-spin"></div>
@@ -421,8 +425,8 @@ export function VendorsPage() {
                         </div>
                     ) : (
                         <>
-                            <div className="overflow-x-auto flex-1">
-                                <table className="w-full text-left">
+                            <div className="flex-1 overflow-x-auto">
+                                <table className="min-w-[1160px] w-full text-left 2xl:min-w-[1280px]">
                                     <thead className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-10">
                                         <tr>
                                             <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">Date</th>
@@ -479,15 +483,15 @@ export function VendorsPage() {
                                                         vendor.pending_amount <= 0 ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
                                                             : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
                                                     )}>
-                                                        {vendor.pending_amount <= 0 ? <><CheckCircle size={10} /> Paid</> : <><Clock size={10} /> {currencySymbol}{vendor.pending_amount.toLocaleString('en-IN')}</>}
+                                                        {vendor.pending_amount <= 0 ? <><CheckCircle size={10} /> {t('vendors.paid')}</> : <><Clock size={10} /> {currencySymbol}{vendor.pending_amount.toLocaleString('en-IN')}</>}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-2 text-right">
                                                     <div className="flex items-center justify-end gap-0.5">
-                                                        <button onClick={() => handleEdit(vendor)} className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded" title="Edit">
+                                                        <button onClick={() => handleEdit(vendor)} className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded" title={t('common.update')}>
                                                             <Edit2 size={14} />
                                                         </button>
-                                                        <button onClick={() => handleDelete(vendor.id!)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" title="Delete">
+                                                        <button onClick={() => handleDelete(vendor.id!)} className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" title={t('common.delete')}>
                                                             <Trash2 size={14} />
                                                         </button>
                                                     </div>
@@ -499,8 +503,8 @@ export function VendorsPage() {
                             </div>
 
                             {/* Pagination */}
-                            <div className="p-3 border-t border-zinc-200 dark:border-zinc-700 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50 shrink-0">
-                                <p className="text-xs text-zinc-500">{vendors.length} of {totalVendors} records</p>
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-700 dark:bg-zinc-900/50 shrink-0">
+                                <p className="text-xs text-zinc-500">{t('vendors.recordsCount', { shown: vendors.length, total: totalVendors })}</p>
                                 <div className="flex items-center gap-1.5">
                                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                         className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">{t('common.prev')}</button>
@@ -531,15 +535,15 @@ export function VendorsPage() {
                             <div className="flex items-center gap-2">
                                 <div className="p-2 bg-white/20 rounded-lg">{isEditing ? <Edit2 size={16} /> : <Plus size={16} />}</div>
                                 <div>
-                                    <h2 className="text-base font-bold">{isEditing ? 'Edit Vendor Record' : 'Add Vendor Record'}</h2>
-                                    <p className="text-violet-200 text-xs">{isEditing ? 'Update details' : 'Enter vendor information'}</p>
+                                    <h2 className="text-base font-bold">{isEditing ? t('vendors.editRecord') : t('vendors.addRecord')}</h2>
+                                    <p className="text-violet-200 text-xs">{isEditing ? t('vendors.updateDetails') : t('vendors.enterVendorInformation')}</p>
                                 </div>
                             </div>
                         </div>
                         <form onSubmit={isEditing ? handleUpdate : handleSubmit} className="p-4 space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid gap-3 md:grid-cols-2">
                                 <div>
-                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Vendor *</label>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.vendor')} *</label>
                                     <div className="flex gap-1.5">
                                         <select required className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
                                             value={formData.vendor_id || ''}
@@ -548,18 +552,18 @@ export function VendorsPage() {
                                                 const p = profiles.find(pr => pr.id === id);
                                                 setFormData({ ...formData, vendor_id: id, vendor_name: p?.name });
                                             }}>
-                                            <option value="">Select Vendor</option>
+                                            <option value="">{t('vendors.selectVendorOption')}</option>
                                             {profiles.map(p => (
                                                 <option key={p.id} value={p.id}>{p.name}</option>
                                             ))}
                                         </select>
-                                        <button type="button" onClick={() => setShowAddProfile(true)} className="p-2 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-300" title="Add New Vendor">
+                                        <button type="button" onClick={() => setShowAddProfile(true)} className="p-2 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-300" title={t('vendors.addNewVendor')}>
                                             <Plus size={16} />
                                         </button>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Date *</label>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.date')} *</label>
                                     <div className="relative">
                                         <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                                         <input required type="date" className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
@@ -570,16 +574,16 @@ export function VendorsPage() {
 
                             {/* Purchase Section */}
                             <div className="border border-zinc-200 dark:border-zinc-600 rounded-lg p-3">
-                                <h3 className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-2 uppercase">Purchase Details</h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <h3 className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-2 uppercase">{t('vendors.purchaseDetails')}</h3>
+                                <div className="grid gap-3 md:grid-cols-2">
                                     <div>
-                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Purchase Bill Image</label>
+                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.purchaseBillImage')}</label>
                                         <div className="flex items-center gap-2">
                                             <input ref={purchaseImageRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, 'purchase')} />
                                             <button type="button" onClick={() => purchaseImageRef.current?.click()}
                                                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg hover:border-violet-400 text-sm text-zinc-500">
                                                 <FileImage size={16} />
-                                                {formData.purchase_bill_image ? 'Change Image' : 'Upload Image'}
+                                                {formData.purchase_bill_image ? t('vendors.changeImage') : t('vendors.uploadImage')}
                                             </button>
                                             {formData.purchase_bill_image && (
                                                 <button type="button" onClick={() => setImagePreview(formData.purchase_bill_image!)} className="p-2 bg-violet-100 dark:bg-violet-900/30 text-violet-600 rounded-lg">
@@ -589,7 +593,7 @@ export function VendorsPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Purchase Amount ({currencySymbol})</label>
+                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.purchaseAmount')} ({currencySymbol})</label>
                                         <div className="relative">
                                             <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                                             <input type="number" step="0.01" className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
@@ -601,16 +605,16 @@ export function VendorsPage() {
 
                             {/* Payment Section */}
                             <div className="border border-zinc-200 dark:border-zinc-600 rounded-lg p-3">
-                                <h3 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2 uppercase">Payment Details</h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <h3 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2 uppercase">{t('vendors.paymentDetails')}</h3>
+                                <div className="grid gap-3 md:grid-cols-2">
                                     <div>
-                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Payment Bill Image</label>
+                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.paymentBillImage')}</label>
                                         <div className="flex items-center gap-2">
                                             <input ref={paymentImageRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, 'payment')} />
                                             <button type="button" onClick={() => paymentImageRef.current?.click()}
                                                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg hover:border-emerald-400 text-sm text-zinc-500">
                                                 <FileImage size={16} />
-                                                {formData.payment_bill_image ? 'Change Image' : 'Upload Image'}
+                                                {formData.payment_bill_image ? t('vendors.changeImage') : t('vendors.uploadImage')}
                                             </button>
                                             {formData.payment_bill_image && (
                                                 <button type="button" onClick={() => setImagePreview(formData.payment_bill_image!)} className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg">
@@ -620,7 +624,7 @@ export function VendorsPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Payment Amount ({currencySymbol})</label>
+                                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.paymentAmount')} ({currencySymbol})</label>
                                         <div className="relative">
                                             <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                                             <input type="number" step="0.01" className="w-full pl-9 pr-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
@@ -631,33 +635,33 @@ export function VendorsPage() {
                             </div>
 
                             {/* Amount Summary */}
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid gap-3 md:grid-cols-3">
                                 <div>
-                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Total Amount ({currencySymbol})</label>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.totalAmount')} ({currencySymbol})</label>
                                     <input type="number" step="0.01" className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
                                         value={formData.total_amount || ''} onChange={e => setFormData({ ...formData, total_amount: Number(e.target.value) })} placeholder="0.00" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Paid Amount ({currencySymbol})</label>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.paidAmount')} ({currencySymbol})</label>
                                     <input type="number" step="0.01" className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
                                         value={formData.paid_amount || ''} onChange={e => setFormData({ ...formData, paid_amount: Number(e.target.value) })} placeholder="0.00" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Pending Amount ({currencySymbol})</label>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.pendingAmount')} ({currencySymbol})</label>
                                     <input type="number" step="0.01" readOnly className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 text-sm font-bold text-amber-600"
                                         value={formData.pending_amount || 0} />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Notes</label>
+                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.notes')}</label>
                                 <textarea className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm resize-none"
-                                    rows={2} value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="Optional notes..." />
+                                    rows={2} value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder={t('vendors.optionalNotes')} />
                             </div>
 
                             <div className="flex gap-2 pt-1">
-                                <button type="button" onClick={closeDialog} className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-700 font-medium text-sm">Cancel</button>
-                                <button type="submit" className="flex-1 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm">{isEditing ? 'Update' : 'Add Record'}</button>
+                                <button type="button" onClick={closeDialog} className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-700 font-medium text-sm">{t('common.cancel')}</button>
+                                <button type="submit" className="flex-1 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm">{isEditing ? t('common.update') : t('vendors.addRecord')}</button>
                             </div>
                         </form>
                     </div>
@@ -681,28 +685,28 @@ export function VendorsPage() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={() => setShowAddProfile(false)}>
                     <div className="bg-white dark:bg-zinc-800 w-full max-w-sm rounded-xl shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-zinc-800 dark:text-zinc-100">Add New Vendor</h3>
+                            <h3 className="font-bold text-zinc-800 dark:text-zinc-100">{t('vendors.addNewVendor')}</h3>
                             <button onClick={() => setShowAddProfile(false)}><X size={16} className="text-zinc-500" /></button>
                         </div>
                         <form onSubmit={handleAddProfile} className="space-y-3">
                             <div>
-                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Vendor Name *</label>
+                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('vendors.vendorName')} *</label>
                                 <input type="text" required className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
-                                    value={newProfile.name} onChange={e => setNewProfile({ ...newProfile, name: e.target.value })} placeholder="Business or Person Name" />
+                                    value={newProfile.name} onChange={e => setNewProfile({ ...newProfile, name: e.target.value })} placeholder={t('vendors.businessOrPersonName')} />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Phone</label>
+                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('common.phone')}</label>
                                 <input type="tel" className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
-                                    value={newProfile.phone} onChange={e => setNewProfile({ ...newProfile, phone: e.target.value })} placeholder="Contact Number" />
+                                    value={newProfile.phone} onChange={e => setNewProfile({ ...newProfile, phone: e.target.value })} placeholder={t('vendors.contactNumber')} />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">Address</label>
+                                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">{t('settings.address')}</label>
                                 <input type="text" className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-violet-400 text-sm"
-                                    value={newProfile.address} onChange={e => setNewProfile({ ...newProfile, address: e.target.value })} placeholder="Location" />
+                                    value={newProfile.address} onChange={e => setNewProfile({ ...newProfile, address: e.target.value })} placeholder={t('vendors.location')} />
                             </div>
                             <div className="flex gap-2 pt-2">
-                                <button type="button" onClick={() => setShowAddProfile(false)} className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 text-sm">Cancel</button>
-                                <button type="submit" className="flex-1 px-3 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium">Create Vendor</button>
+                                <button type="button" onClick={() => setShowAddProfile(false)} className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 text-sm">{t('common.cancel')}</button>
+                                <button type="submit" className="flex-1 px-3 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium">{t('vendors.createVendor')}</button>
                             </div>
                         </form>
                     </div>

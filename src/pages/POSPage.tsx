@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCartStore, type Product } from '../store/useCartStore';
 import { useSettingsStore, getCurrencySymbol } from '../store/useSettingsStore';
 import { useBarcodeListener } from '../hooks/useBarcodeListener';
@@ -18,7 +18,8 @@ export const POSPage = () => {
 
     const [products, setProducts] = useState<Product[]>([]);
     const [search, setSearch] = useState('');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'UPI'>('CASH');
     const [processing, setProcessing] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -28,12 +29,19 @@ export const POSPage = () => {
     const [customerPhone, setCustomerPhone] = useState('');
     const [customerDob, setCustomerDob] = useState('');
 
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
     const fetchProducts = async (searchQuery = '') => {
-        // @ts-ignore
-        if (window.api?.getProducts) {
+        try {
             // @ts-ignore
-            const response = await window.api.getProducts({ page: 1, pageSize: 40, search: searchQuery });
-            setProducts(response.products || []);
+            if (window.api?.getProducts) {
+                // @ts-ignore
+                const response = await window.api.getProducts({ page: 1, pageSize: 100, search: searchQuery, category: 'all' });
+                setProducts(response.products || []);
+            }
+        } catch (error) {
+            console.error('Failed to load POS products', error);
+            setProducts([]);
         }
     };
 
@@ -59,11 +67,38 @@ export const POSPage = () => {
 
     const [extraDiscount, setExtraDiscount] = useState(0);
 
-    const filtered = products;
+    const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean))) as string[];
+    const filtered = products.filter(p => selectedCategory ? p.category === selectedCategory : true);
+
     const subtotal = getTotal();
     const tax = taxEnabled ? subtotal * (taxRate / 100) : 0;
     const grossTotal = subtotal + tax;
     const finalTotal = Math.max(0, grossTotal - extraDiscount);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'F2') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            } else if (e.key === 'F4') {
+                e.preventDefault();
+                setViewMode(prev => prev === 'grid' ? 'list' : 'grid');
+            } else if (e.key === 'F8') {
+                e.preventDefault();
+                if (cart.length > 0 && !processing) {
+                    const btn = document.getElementById('checkout-btn');
+                    if (btn) btn.click();
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setSearch('');
+                setSelectedCategory(null);
+                searchInputRef.current?.blur();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [cart.length, processing]);
 
     const handleCheckout = async (shouldPrint: boolean = false) => {
         if (cart.length === 0) return;
@@ -110,111 +145,9 @@ export const POSPage = () => {
     };
 
     return (
-        <div className="flex h-full bg-zinc-100 dark:bg-zinc-900 font-sans">
-            {/* LEFT: Product Grid - Compact */}
-            <div className="flex-[0.6] flex flex-col h-full overflow-hidden border-r border-zinc-200 dark:border-zinc-700">
-                {/* Header - Compact */}
-                <div className="p-3 shrink-0 bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <div className="p-1.5 bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-700 rounded-lg">
-                                <ShoppingCart size={16} className="text-zinc-700 dark:text-zinc-300" />
-                            </div>
-                            <div>
-                                <h1 className="text-base font-bold text-zinc-800 dark:text-zinc-100">{t('pos.title')}</h1>
-                                <p className="text-[10px] text-zinc-500">{t('pos.scanOrClick')}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <BillingModeToggle
-                                value={billingMode}
-                                onChange={setBillingMode}
-                                retailLabel={t('settings.retail')}
-                                wholesaleLabel={t('settings.wholesale')}
-                            />
-                            <div className="flex items-center bg-zinc-100 dark:bg-zinc-700 rounded-lg p-0.5">
-                                <button onClick={() => setViewMode('grid')} className={cn("p-1.5 rounded-md", viewMode === 'grid' ? "bg-white dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200" : "text-zinc-400 hover:text-zinc-600")}>
-                                    <LayoutGrid size={14} />
-                                </button>
-                                <button onClick={() => setViewMode('list')} className={cn("p-1.5 rounded-md", viewMode === 'list' ? "bg-white dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200" : "text-zinc-400 hover:text-zinc-600")}>
-                                    <List size={14} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
-                        <input type="text" placeholder={t('pos.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)}
-                            className="w-full h-9 pl-9 pr-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-600 rounded-lg text-sm outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 placeholder:text-zinc-400 text-zinc-800 dark:text-zinc-100" />
-                    </div>
-                </div>
-
-                {/* Product Grid/List - Compact */}
-                <div className="flex-1 overflow-y-auto p-2">
-                    {viewMode === 'grid' ? (
-                        <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5">
-                            {filtered.map(product => (
-                                <button key={product.id} onClick={() => product.stock > 0 && addToCart(product)} disabled={product.stock === 0}
-                                    className={cn("group flex flex-col bg-white dark:bg-zinc-800 rounded-lg p-2 border border-zinc-200 dark:border-zinc-700 text-left", product.stock === 0 && "opacity-50 cursor-not-allowed")}>
-                                    <div className="w-full aspect-square bg-zinc-100 dark:bg-zinc-700 rounded mb-1.5 flex items-center justify-center">
-                                        <span className="text-lg font-bold text-zinc-300 dark:text-zinc-500">{product.name.charAt(0)}</span>
-                                    </div>
-                                    <h3 className="font-medium text-zinc-800 dark:text-zinc-100 text-xs line-clamp-2 mb-0.5">{product.name}</h3>
-                                    <p className="text-[10px] text-zinc-400 mb-1">{product.sku}</p>
-                                    <div className="mt-auto flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-zinc-800 dark:text-zinc-100 text-xs">{currencySymbol}{resolveProductPrice(product, billingMode).toFixed(2)}</span>
-                                            {billingMode === 'wholesale' && !hasWholesalePrice(product) ? (
-                                                <span className="text-[9px] text-amber-500">{t('pos.priceFallback')}</span>
-                                            ) : null}
-                                        </div>
-                                        <span className={cn("text-[9px] font-medium px-1 py-0.5 rounded",
-                                            product.stock === 0 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                                : product.stock < 10 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                                                    : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                        )}>{product.stock === 0 ? 'Out' : product.stock}</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-1">
-                            {filtered.map(product => (
-                                <button key={product.id} onClick={() => product.stock > 0 && addToCart(product)} disabled={product.stock === 0}
-                                    className={cn("w-full flex items-center gap-2 bg-white dark:bg-zinc-800 rounded-lg p-2 border border-zinc-200 dark:border-zinc-700 text-left", product.stock === 0 && "opacity-50 cursor-not-allowed")}>
-                                    <div className="w-8 h-8 bg-zinc-100 dark:bg-zinc-700 rounded flex items-center justify-center shrink-0">
-                                        <span className="text-sm font-bold text-zinc-300 dark:text-zinc-500">{product.name.charAt(0)}</span>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-medium text-zinc-800 dark:text-zinc-100 text-xs truncate">{product.name}</h3>
-                                        <p className="text-[10px] text-zinc-400">{product.sku}</p>
-                                    </div>
-                                    <div className="flex min-w-[74px] flex-col items-end">
-                                        <span className="font-bold text-zinc-800 dark:text-zinc-100 text-xs">{currencySymbol}{resolveProductPrice(product, billingMode).toFixed(2)}</span>
-                                        {billingMode === 'wholesale' && !hasWholesalePrice(product) ? (
-                                            <span className="text-[9px] text-amber-500">{t('pos.priceFallback')}</span>
-                                        ) : null}
-                                    </div>
-                                    <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded",
-                                        product.stock === 0 ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                            : product.stock < 10 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                                                : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                    )}>{product.stock}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    {filtered.length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center text-zinc-400">
-                            <ShoppingBag size={36} strokeWidth={1.5} className="mb-2 opacity-50" />
-                            <p className="text-sm font-medium">{t('pos.productsEmpty')}</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* RIGHT: Cart - Compact */}
-            <div className="flex-[0.4] bg-white dark:bg-zinc-800 flex flex-col h-full shadow-xl">
+        <div className="flex h-full flex-col overflow-hidden overscroll-contain bg-zinc-100 font-sans xl:flex-row dark:bg-zinc-900">
+            {/* LEFT: Cart - Compact */}
+            <div className="flex min-h-0 min-w-0 shrink-0 flex-col border-b border-zinc-200 bg-white shadow-xl xl:w-[420px] xl:border-b-0 xl:border-r 2xl:w-[460px] dark:border-zinc-700 dark:bg-zinc-800">
                 {/* Cart Header */}
                 <div className="p-3 shrink-0 border-b border-zinc-200 dark:border-zinc-700">
                     <div className="flex items-center justify-between mb-2">
@@ -223,7 +156,6 @@ export const POSPage = () => {
                             <Trash2 size={14} />
                         </button>
                     </div>
-                    {/* Customer Card - Compact */}
                     <div onClick={() => setShowCustomerModal(true)} className="w-full flex items-center justify-between p-2 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 group cursor-pointer">
                         <div className="flex items-center gap-2">
                             <div className={cn("w-7 h-7 rounded-full flex items-center justify-center", customer ? "bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-400 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-600")}>
@@ -237,7 +169,6 @@ export const POSPage = () => {
                     </div>
                 </div>
 
-                {/* Cart Items - Compact */}
                 <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
                     {cart.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-zinc-300 dark:text-zinc-600 space-y-2">
@@ -280,9 +211,7 @@ export const POSPage = () => {
                     )}
                 </div>
 
-                {/* Footer - Compact */}
                 <div className="shrink-0 p-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
-                    {/* Payment Methods - Compact */}
                     <div className="grid grid-cols-3 gap-1.5 mb-2">
                         {[{ value: 'CASH', label: t('pos.payment.cash'), icon: Banknote }, { value: 'CARD', label: t('pos.payment.card'), icon: CreditCard }, { value: 'UPI', label: t('pos.payment.upi'), icon: QrCode }].map((method) => (
                             <button key={method.value} onClick={() => setPaymentMethod(method.value as any)}
@@ -293,7 +222,6 @@ export const POSPage = () => {
                         ))}
                     </div>
 
-                    {/* Extra Discount Input */}
                     <div className="mb-2 bg-white dark:bg-zinc-800 p-2 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-600">
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{t('pos.extraDiscount')}</span>
@@ -305,7 +233,6 @@ export const POSPage = () => {
                         </div>
                     </div>
 
-                    {/* Totals - Compact */}
                     <div className="space-y-1 mb-3">
                         <div className="flex justify-between text-xs text-zinc-500"><span>{t('receipt.subtotal')}</span><span>{currencySymbol}{subtotal.toFixed(2)}</span></div>
                         <div className="flex justify-between text-xs text-zinc-500"><span>{t('receipt.tax', { rate: taxRate })}</span><span>{currencySymbol}{tax.toFixed(2)}</span></div>
@@ -319,9 +246,8 @@ export const POSPage = () => {
                         </div>
                     </div>
 
-                    {/* Checkout Buttons */}
                     <div className="flex gap-2">
-                        <button disabled={processing || cart.length === 0} onClick={() => handleCheckout(false)}
+                        <button id="checkout-btn" disabled={processing || cart.length === 0} onClick={() => handleCheckout(false)}
                             className={cn("flex-1 h-10 rounded-lg font-semibold text-sm flex items-center justify-center gap-1.5",
                                 processing || cart.length === 0 ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-400 cursor-not-allowed" : "bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-600")}>
                             {processing ? <span>...</span> : <><CreditCard size={14} /><span>{t('pos.checkout')}</span></>}
@@ -332,6 +258,141 @@ export const POSPage = () => {
                             {processing ? <span>...</span> : <><Printer size={14} /><span>{t('pos.printCheckout')}</span></>}
                         </button>
                     </div>
+                </div>
+            </div>
+
+            {/* RIGHT: Product Grid - Compact */}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden xl:border-l-0 dark:border-zinc-700">
+                {/* Header - Compact */}
+                <div className="p-3 shrink-0 bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 flex flex-col gap-3 z-10 shadow-sm relative">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex items-center gap-2">
+                            <div className="rounded-xl bg-slate-950 p-2 text-white shadow-sm dark:bg-white dark:text-zinc-950">
+                                <ShoppingCart size={18} />
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{t('pos.title')}</h1>
+                                <p className="text-[10px] text-zinc-500">{t('pos.scanOrClick')}</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-end gap-3">
+                            <BillingModeToggle
+                                value={billingMode}
+                                onChange={setBillingMode}
+                                retailLabel={t('settings.retail')}
+                                wholesaleLabel={t('settings.wholesale')}
+                            />
+                            <div className="flex items-center bg-zinc-100 dark:bg-zinc-700 rounded-lg p-0.5">
+                                <button onClick={() => setViewMode('grid')} className={cn("p-1.5 rounded-md", viewMode === 'grid' ? "bg-white dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}>
+                                    <LayoutGrid size={14} />
+                                </button>
+                                <button onClick={() => setViewMode('list')} className={cn("p-1.5 rounded-md", viewMode === 'list' ? "bg-white dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}>
+                                    <List size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                        <input ref={searchInputRef} type="text" placeholder={`${t('pos.searchPlaceholder')} [F2]`} value={search} onChange={(e) => setSearch(e.target.value)}
+                            className="w-full h-10 pl-10 pr-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-600 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder:text-zinc-400 text-zinc-800 dark:text-zinc-100 transition-shadow shadow-sm" />
+                    </div>
+                    {/* Categories Row */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        <button
+                            onClick={() => setSelectedCategory(null)}
+                            className={cn("whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold transition-colors border",
+                                selectedCategory === null
+                                    ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-700/50 dark:text-indigo-300"
+                                    : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                            )}
+                        >
+                            {t('pos.allCategories')}
+                        </button>
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedCategory(cat)}
+                                className={cn("whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-semibold transition-colors border",
+                                    selectedCategory === cat
+                                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-700/50 dark:text-indigo-300"
+                                        : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                                )}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Product Grid/List - Compact */}
+                <div className="flex-1 overflow-y-auto p-2 bg-zinc-50 dark:bg-zinc-900/50">
+                    {viewMode === 'grid' ? (
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                            {filtered.map(product => (
+                                <button key={product.id} onClick={() => product.stock > 0 && addToCart(product)} disabled={product.stock === 0}
+                                    className={cn("group flex flex-col bg-white dark:bg-zinc-800 rounded-xl p-2.5 border text-left transition-all hover:shadow-md",
+                                        product.stock === 0 ? "opacity-50 cursor-not-allowed border-zinc-200 dark:border-zinc-700" : "border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 active:bg-indigo-50/50 dark:active:bg-indigo-900/20")}>
+                                    <div className="flex items-start justify-between w-full mb-2">
+                                        <span className="text-[9px] text-zinc-400 font-medium uppercase">{product.sku}</span>
+                                        <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
+                                            product.stock === 0 ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                                : product.stock < 10 ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                                    : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                        )}>STOCK {product.stock === 0 ? '0' : product.stock}</span>
+                                    </div>
+                                    <h3 className="font-semibold text-zinc-800 dark:text-zinc-100 text-[12px] leading-tight line-clamp-2 mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{product.name}</h3>
+                                    <div className="mt-auto flex items-center justify-between w-full">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-indigo-600 dark:text-indigo-400 text-[13px]">{currencySymbol}{resolveProductPrice(product, billingMode).toFixed(2)}</span>
+                                            {billingMode === 'wholesale' && !hasWholesalePrice(product) ? (
+                                                <span className="text-[9px] text-amber-500 font-medium">{t('pos.priceFallback')}</span>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-2 2xl:grid-cols-2">
+                            {filtered.map(product => (
+                                <button key={product.id} onClick={() => product.stock > 0 && addToCart(product)} disabled={product.stock === 0}
+                                    className={cn("w-full flex items-center gap-3 bg-white dark:bg-zinc-800 rounded-xl p-2.5 border text-left transition-all hover:shadow-sm",
+                                        product.stock === 0 ? "opacity-50 cursor-not-allowed border-zinc-200 dark:border-zinc-700" : "border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 active:bg-indigo-50/50 dark:active:bg-indigo-900/20")}>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="text-[9px] text-zinc-400 font-medium uppercase">{product.sku}</span>
+                                            <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
+                                                product.stock === 0 ? "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                                    : product.stock < 10 ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                                        : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                            )}>STOCK {product.stock === 0 ? '0' : product.stock}</span>
+                                        </div>
+                                        <h3 className="font-semibold text-zinc-800 dark:text-zinc-100 text-[12px] truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{product.name}</h3>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="font-bold text-indigo-600 dark:text-indigo-400 text-[13px]">{currencySymbol}{resolveProductPrice(product, billingMode).toFixed(2)}</span>
+                                        {billingMode === 'wholesale' && !hasWholesalePrice(product) ? (
+                                            <span className="text-[8px] text-amber-500 font-medium">{t('pos.priceFallback')}</span>
+                                        ) : null}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {filtered.length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center text-zinc-400">
+                            <ShoppingBag size={36} strokeWidth={1.5} className="mb-2 opacity-50" />
+                            <p className="text-sm font-medium">{t('pos.productsEmpty')}</p>
+                        </div>
+                    )}
+                </div>
+                {/* Keyboard Shortcuts Footer */}
+                <div className="flex flex-wrap items-center gap-4 p-2.5 shrink-0 bg-white dark:bg-zinc-800 border-t border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-500 font-medium">
+                    <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-sans shadow-sm">F2</kbd> {t('pos.focusSearch')}</span>
+                    <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-sans shadow-sm">F4</kbd> {t('pos.switchMode')}</span>
+                    <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-sans shadow-sm">F8</kbd> {t('pos.quickCheckout')}</span>
+                    <span className="flex items-center gap-1.5"><kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-sans shadow-sm">ESC</kbd> {t('pos.clearView')}</span>
                 </div>
             </div>
 

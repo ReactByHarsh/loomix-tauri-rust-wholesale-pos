@@ -143,7 +143,23 @@ function detectArtifact(relativePath) {
   return null;
 }
 
-function buildPlatformMap(bundleDir, baseUrl) {
+function compareArtifacts(candidate, current) {
+  if (!current) {
+    return true;
+  }
+
+  if (candidate.priority !== current.priority) {
+    return candidate.priority > current.priority;
+  }
+
+  if (candidate.versionMatch !== current.versionMatch) {
+    return candidate.versionMatch;
+  }
+
+  return candidate.modifiedTimeMs > current.modifiedTimeMs;
+}
+
+function buildPlatformMap(bundleDir, baseUrl, version) {
   const files = walkFiles(bundleDir);
   const platforms = {};
 
@@ -165,16 +181,20 @@ function buildPlatformMap(bundleDir, baseUrl) {
       throw new Error(`Missing signature for updater artifact: ${relativePath}`);
     }
 
-    const current = platforms[artifact.platform];
-    if (current && current.priority >= artifact.priority) {
-      continue;
-    }
-
-    platforms[artifact.platform] = {
+    const candidate = {
       priority: artifact.priority,
+      versionMatch: relativePath.includes(version),
+      modifiedTimeMs: fs.statSync(absolutePath).mtimeMs,
       signature: fs.readFileSync(signaturePath, 'utf8').trim(),
       url: new URL(relativePath, ensureTrailingSlash(baseUrl)).toString(),
     };
+
+    const current = platforms[artifact.platform];
+    if (!compareArtifacts(candidate, current)) {
+      continue;
+    }
+
+    platforms[artifact.platform] = candidate;
   }
 
   const finalized = {};
@@ -207,7 +227,7 @@ function main() {
   const version = readVersion(projectRoot, args);
   const notes = readReleaseNotes(args, projectRoot, version);
   const pubDate = args['pub-date'] ?? new Date().toISOString();
-  const platforms = buildPlatformMap(bundleDir, baseUrl);
+  const platforms = buildPlatformMap(bundleDir, baseUrl, version);
 
   if (Object.keys(platforms).length === 0) {
     throw new Error(`No updater artifacts were detected under ${bundleDir}`);

@@ -51,13 +51,13 @@ export function DashboardPage() {
     const { stats, chart } = data;
 
     return (
-        <div className="h-full overflow-y-auto bg-zinc-100 dark:bg-zinc-900">
-            <div className="p-5 max-w-7xl mx-auto space-y-4">
+        <div className="h-full overflow-y-auto overscroll-contain bg-zinc-100 dark:bg-zinc-900">
+            <div className="mx-auto max-w-[1900px] p-5 space-y-4">
                 {/* Header - Compact */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-800 rounded-lg">
-                            <BarChart3 size={20} className="text-zinc-700 dark:text-zinc-300" />
+                        <div className="rounded-xl bg-slate-950 p-2 text-white shadow-sm dark:bg-white dark:text-zinc-950">
+                            <BarChart3 size={20} />
                         </div>
                         <div>
                             <h1 className="text-xl font-bold tracking-tight text-zinc-800 dark:text-zinc-100">
@@ -75,7 +75,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* Stats Cards - Compact 4-column */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3 2xl:grid-cols-4">
                     {/* Sales Card (Today & Total) */}
                     <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-2">
@@ -149,7 +149,7 @@ export function DashboardPage() {
 
                 {/* Chart - Compact */}
                 <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                         <div>
                             <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{t('dashboard.salesTrend')}</h3>
                             <p className="text-xs text-zinc-500 mt-0.5">{t('dashboard.last7Days')}</p>
@@ -213,7 +213,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* Quick Actions Row - Compact */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <a href="#/pos" className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                         <ShoppingCart size={18} className="text-zinc-600 dark:text-zinc-400" />
                         <div>

@@ -83,8 +83,12 @@ export function HistoryPage() {
     const paymentMethods = useMemo(() => Array.from(new Set(transactions.map(tx => tx.payment_method))), [transactions]);
 
     const viewTransaction = async (id: number) => {
-        // @ts-ignore
-        if (window.api?.getTransactionById) { const tx = await window.api.getTransactionById(id); setSelectedTx(tx); setShowModal(true); }
+        try {
+            // @ts-ignore
+            if (window.api?.getTransactionById) { const tx = await window.api.getTransactionById(id); setSelectedTx(tx); setShowModal(true); }
+        } catch (error) {
+            console.error('Failed to load transaction', error);
+        }
     };
 
     const handlePrintReceipt = async (tx: TransactionDetail) => {
@@ -158,13 +162,14 @@ export function HistoryPage() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-zinc-100 dark:bg-zinc-900">
+        <div className="flex h-full flex-col overscroll-contain bg-zinc-100 dark:bg-zinc-900">
             {/* Compact Header */}
             <div className="sticky top-0 z-20 shrink-0 border-b border-zinc-200 bg-white/95 p-4 backdrop-blur dark:border-zinc-700 dark:bg-zinc-800/95">
-                <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="mx-auto w-full max-w-[1900px]">
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-600 dark:to-zinc-700 rounded-lg">
-                            <History size={18} className="text-zinc-700 dark:text-zinc-300" />
+                        <div className="rounded-xl bg-slate-950 p-2 text-white shadow-sm dark:bg-white dark:text-zinc-950">
+                            <History size={18} />
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{t('history.title')}</h1>
@@ -177,7 +182,7 @@ export function HistoryPage() {
                 </div>
 
                 {/* Compact Stats */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
                     <div className="bg-zinc-50 dark:bg-zinc-900 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-[10px] font-medium text-zinc-500 uppercase">{t('history.total')}</span>
@@ -208,18 +213,18 @@ export function HistoryPage() {
                             <FileText size={12} className="text-zinc-400" />
                         </div>
                         <p className="text-lg font-bold text-zinc-800 dark:text-zinc-100">{filteredTransactions.length}</p>
-                        <p className="text-[10px] text-zinc-400">Filtered</p>
+                        <p className="text-[10px] text-zinc-400">{t('history.filtered')}</p>
                     </div>
                 </div>
 
                 {/* Search and Filters */}
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
+                <div className="flex flex-wrap gap-2">
+                    <div className="relative min-w-[240px] flex-1">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <input type="text" placeholder={t('history.searchPlaceholder')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-9 pr-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 text-sm" />
                     </div>
-                    <div className="flex bg-zinc-100 dark:bg-zinc-900 rounded-lg p-0.5 border border-zinc-200 dark:border-zinc-700">
+                    <div className="flex flex-wrap bg-zinc-100 dark:bg-zinc-900 rounded-lg p-0.5 border border-zinc-200 dark:border-zinc-700">
                         {[{ value: 'all', label: t('common.all') }, { value: 'today', label: t('history.today') }, { value: 'week', label: t('vendors.week') }, { value: 'month', label: t('vendors.month') }].map((option) => (
                             <button key={option.value} onClick={() => setDateFilter(option.value as any)}
                                 className={`px-2.5 py-1.5 rounded-md text-xs font-medium ${dateFilter === option.value ? 'bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 hover:text-zinc-700'}`}>
@@ -233,11 +238,12 @@ export function HistoryPage() {
                         {paymentMethods.map(method => <option key={method} value={method}>{method}</option>)}
                     </select>
                 </div>
+                </div>
             </div>
 
             {/* Table */}
             <div className="flex-1 overflow-y-auto p-4">
-                <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col h-full">
+                <div className="mx-auto flex h-full w-full max-w-[1900px] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-800">
                     {isLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center">
                             <div className="w-8 h-8 border-3 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-400 rounded-full"></div>
@@ -245,8 +251,8 @@ export function HistoryPage() {
                         </div>
                     ) : (
                         <>
-                            <div className="overflow-x-auto flex-1">
-                                <table className="w-full text-left">
+                            <div className="flex-1 overflow-x-auto">
+                                <table className="min-w-[1040px] w-full text-left 2xl:min-w-[1180px]">
                                     <thead className="bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 sticky top-0">
                                         <tr>
                                             <th className="px-4 py-2 font-semibold text-[10px] uppercase tracking-wider text-zinc-500">{t('history.order')}</th>
@@ -284,10 +290,10 @@ export function HistoryPage() {
                                                 </td>
                                                 <td className="px-4 py-2 text-right">
                                                     <div className="flex items-center justify-end gap-0.5">
-                                                        <button onClick={() => viewTransaction(tx.id)} className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded" title="View">
+                                                        <button onClick={() => viewTransaction(tx.id)} className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded" title={t('history.view')}>
                                                             <Eye size={14} />
                                                         </button>
-                                                        <button onClick={() => printById(tx.id)} className="p-1.5 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded" title="Print">
+                                                        <button onClick={() => printById(tx.id)} className="p-1.5 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded" title={t('history.print')}>
                                                             <Printer size={14} />
                                                         </button>
                                                     </div>
@@ -299,8 +305,8 @@ export function HistoryPage() {
                             </div>
 
                             {/* Pagination */}
-                            <div className="p-3 border-t border-zinc-200 dark:border-zinc-700 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50 shrink-0">
-                                <p className="text-xs text-zinc-500">{filteredTransactions.length} of {totalTransactions} transactions</p>
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-700 dark:bg-zinc-900/50 shrink-0">
+                                <p className="text-xs text-zinc-500">{t('history.transactionsCount', { shown: filteredTransactions.length, total: totalTransactions })}</p>
                                 <div className="flex items-center gap-1.5">
                                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                         className="px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-600 hover:bg-white dark:hover:bg-zinc-700 disabled:opacity-50">{t('common.prev')}</button>
@@ -323,7 +329,7 @@ export function HistoryPage() {
                             <div className="flex items-center gap-2">
                                 <Receipt size={20} className="text-white/90" />
                                 <div>
-                                    <h2 className="text-base font-bold">Order #{selectedTx.id}</h2>
+                                    <h2 className="text-base font-bold">{t('history.order')} #{selectedTx.id}</h2>
                                     {selectedTx.customer_name && <p className="text-zinc-300 text-xs font-medium">{selectedTx.customer_name}</p>}
                                     <p className="text-zinc-400 text-xs flex items-center gap-1 mt-0.5"><Clock size={10} /> {new Date(selectedTx.created_at).toLocaleString()}</p>
                                 </div>
@@ -337,7 +343,7 @@ export function HistoryPage() {
                                             <span className="w-6 h-6 rounded bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-300 font-bold text-xs">{item.quantity}x</span>
                                             <div>
                                                 <p className="font-medium text-zinc-800 dark:text-zinc-100 text-sm">{item.name}</p>
-                                                <p className="text-[11px] text-zinc-500">{currencySymbol}{(typeof item.price_at_sale === 'number' ? item.price_at_sale : 0).toFixed(2)} each</p>
+                                                <p className="text-[11px] text-zinc-500">{currencySymbol}{(typeof item.price_at_sale === 'number' ? item.price_at_sale : 0).toFixed(2)} {t('history.each')}</p>
                                             </div>
                                         </div>
                                         <p className="font-semibold text-zinc-800 dark:text-zinc-100 text-sm">{currencySymbol}{((typeof item.price_at_sale === 'number' ? item.price_at_sale : 0) * (item.quantity || 0)).toFixed(2)}</p>
@@ -360,7 +366,7 @@ export function HistoryPage() {
                                 <div className="flex justify-between items-center pt-1.5">
                                     <span className="text-xs text-zinc-500">{t('history.payment')}</span>
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium ${getPaymentBadgeClass(selectedTx.payment_method)}`}>
-                                        {getPaymentIcon(selectedTx.payment_method)} {selectedTx.payment_method || 'Unknown'}
+                                        {getPaymentIcon(selectedTx.payment_method)} {selectedTx.payment_method || t('history.unknown')}
                                     </span>
                                 </div>
                             </div>

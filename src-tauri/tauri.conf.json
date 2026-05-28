@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "loomix",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "identifier": "com.loomix.pos",
   "build": {
     "frontendDist": "../dist",
@@ -43,7 +43,7 @@
         "https://pub-01cd1bbe8d8646d18ad3568dd4b68027.r2.dev/latest.json"
       ],
       "windows": {
-        "installMode": "passive"
+        "installMode": "basicUi"
       }
     }
   }

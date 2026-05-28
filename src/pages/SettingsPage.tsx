@@ -28,7 +28,7 @@ interface SettingsBackupData {
     vendorsEnabled: boolean;
 }
 
-const BARCODE_STORAGE_KEY = 'loomix-barcode-history';
+const BARCODE_STORAGE_KEY = 'loomix-barcode-printing-tray';
 const BARCODE_HISTORY_LIMIT = 100;
 
 export function SettingsPage() {
@@ -155,15 +155,15 @@ export function SettingsPage() {
     };
 
     function formatLastChecked(date: Date | null) {
-        if (!date) return 'Not checked yet';
+        if (!date) return t('settings.notCheckedYet');
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
         const diffSec = Math.floor(diffMs / 1000);
-        if (diffSec < 60) return 'Just now';
+        if (diffSec < 60) return t('settings.justNow');
         const diffMin = Math.floor(diffSec / 60);
-        if (diffMin < 60) return `${diffMin}m ago`;
+        if (diffMin < 60) return t('settings.minutesAgo', { count: diffMin });
         const diffHr = Math.floor(diffMin / 60);
-        if (diffHr < 24) return `${diffHr}h ago`;
+        if (diffHr < 24) return t('settings.hoursAgo', { count: diffHr });
         return date.toLocaleDateString();
     }
 
@@ -277,7 +277,7 @@ export function SettingsPage() {
             // @ts-ignore
             const result = await window.api?.restoreProductsBackup?.(data || []);
             if (!result?.success) throw new Error(result?.error || 'Unable to restore inventory.');
-            alert('Inventory data restored.');
+            alert(t('settings.inventoryRestored'));
         });
     };
 
@@ -299,7 +299,7 @@ export function SettingsPage() {
             // @ts-ignore
             const result = await window.api?.restoreTransactionBackup?.(data);
             if (!result?.success) throw new Error(result?.error || 'Unable to restore transaction history.');
-            alert('Transaction history restored.');
+            alert(t('settings.historyRestored'));
         });
     };
 
@@ -330,8 +330,8 @@ export function SettingsPage() {
     };
 
     return (
-        <div className="h-full overflow-y-auto bg-slate-50 dark:bg-zinc-950">
-            <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4">
+        <div className="h-full overflow-y-auto overscroll-contain bg-slate-50 dark:bg-zinc-950">
+            <div className="mx-auto flex max-w-[1900px] flex-col gap-4 p-4">
                 {/* Header */}
                 <div className="sticky top-0 z-20 -mx-4 flex items-center justify-between border-b border-slate-200 bg-slate-50/95 px-4 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
                     <div className="flex items-center gap-3">
@@ -354,7 +354,7 @@ export function SettingsPage() {
                     </div>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+                <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.9fr)]">
                     {/* Left Column */}
                     <div className="flex flex-col gap-4">
                         {/* Store Identity */}
@@ -554,22 +554,22 @@ export function SettingsPage() {
                         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                             <div className="flex items-center gap-2">
                                 <RefreshCcw size={16} className="text-sky-600 dark:text-sky-400" />
-                                <h2 className="text-sm font-bold text-slate-900 dark:text-white">App Updates</h2>
+                                <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('settings.updatesTitle')}</h2>
                             </div>
 
                             {/* Version row */}
                             <div className="mt-3 grid gap-3 md:grid-cols-2">
                                 <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-950">
-                                    <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">Installed version</p>
+                                    <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">{t('settings.installedVersion')}</p>
                                     <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-zinc-100">
                                         {updater.state.currentVersion ?? '-'}
                                     </p>
                                 </div>
 
                                 <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-950">
-                                    <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">Available version</p>
+                                    <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">{t('settings.availableVersion')}</p>
                                     <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-zinc-100">
-                                        {updater.state.availableVersion ?? (updater.state.status === 'idle' && updater.state.lastCheckedAt ? 'Up to date' : '-')}
+                                        {updater.state.availableVersion ?? (updater.state.status === 'idle' && updater.state.lastCheckedAt ? t('settings.upToDate') : '-')}
                                     </p>
                                 </div>
                             </div>
@@ -578,17 +578,17 @@ export function SettingsPage() {
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                                 {updater.state.status === 'idle' && updater.state.lastCheckedAt && !updater.state.availableVersion && (
                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                        <CheckCircle2 size={12} /> You're on the latest version
+                                        <CheckCircle2 size={12} /> {t('settings.latestVersion')}
                                     </span>
                                 )}
                                 {updater.state.status === 'checking' && (
                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                                        <LoaderCircle size={12} className="animate-spin" /> Checking for updates...
+                                        <LoaderCircle size={12} className="animate-spin" /> {t('settings.checkingUpdates')}
                                     </span>
                                 )}
                                 {updater.state.status === 'available' && (
                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                                        <ArrowDownToLine size={12} /> Update available - see banner above
+                                        <ArrowDownToLine size={12} /> {t('settings.updateAvailable')}
                                     </span>
                                 )}
                                 {updater.state.status === 'downloading' && (
@@ -598,13 +598,13 @@ export function SettingsPage() {
                                 )}
                                 {updater.state.status === 'ready' && (
                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-                                        <Check size={12} /> Ready to restart
+                                        <Check size={12} /> {t('settings.readyToRestart')}
                                     </span>
                                 )}
 
                                 <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500">
                                     <Clock size={11} />
-                                    Last checked: {formatLastChecked(updater.state.lastCheckedAt)}
+                                    {t('settings.lastChecked')}: {formatLastChecked(updater.state.lastCheckedAt)}
                                 </span>
                             </div>
 
@@ -631,15 +631,15 @@ export function SettingsPage() {
                                     )}
                                 >
                                     {isCheckingUpdate || updater.state.status === 'checking' ? (
-                                        <><LoaderCircle size={13} className="animate-spin" /> Checking...</>
+                                        <><LoaderCircle size={13} className="animate-spin" /> {t('settings.checkingUpdates')}</>
                                     ) : (
-                                        <><RefreshCcw size={13} /> Check for updates</>
+                                        <><RefreshCcw size={13} /> {t('settings.checkForUpdates')}</>
                                     )}
                                 </button>
 
                                 <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500">
                                     <Info size={12} />
-                                    App auto-checks on startup
+                                    {t('settings.autoChecksOnStartup')}
                                 </div>
                             </div>
                         </div>
@@ -648,18 +648,18 @@ export function SettingsPage() {
                         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                             <div className="flex items-center gap-2">
                                 <Database size={16} className="text-indigo-600 dark:text-indigo-400" />
-                                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Backup & Restore</h2>
+                                <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('settings.backupRestore')}</h2>
                             </div>
                             <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                                Backup and restore saved barcodes, inventory, transaction history, or the full app data.
+                                {t('settings.backupRestoreHint')}
                             </p>
 
                             <div className="mt-4 grid gap-3">
                                 {[
                                     {
                                         key: 'barcodes',
-                                        title: 'Saved Barcodes',
-                                        description: 'Back up the recent barcode list stored in the app, capped at 100 items.',
+                                        title: t('settings.backupSavedBarcodes'),
+                                        description: t('settings.backupSavedBarcodesHint'),
                                         onBackup: () => void handleBackupBarcodes(),
                                         onRestoreClick: () => barcodeRestoreInputRef.current?.click(),
                                         inputRef: barcodeRestoreInputRef,
@@ -667,8 +667,8 @@ export function SettingsPage() {
                                     },
                                     {
                                         key: 'inventory',
-                                        title: 'Inventory Data',
-                                        description: 'Back up all products including retail price, wholesale price, cost, stock, and categories.',
+                                        title: t('settings.backupInventory'),
+                                        description: t('settings.backupInventoryHint'),
                                         onBackup: () => void handleBackupInventory(),
                                         onRestoreClick: () => inventoryRestoreInputRef.current?.click(),
                                         inputRef: inventoryRestoreInputRef,
@@ -676,8 +676,8 @@ export function SettingsPage() {
                                     },
                                     {
                                         key: 'history',
-                                        title: 'Transaction History',
-                                        description: 'Back up all transactions and transaction items so history can be restored exactly.',
+                                        title: t('settings.backupHistory'),
+                                        description: t('settings.backupHistoryHint'),
                                         onBackup: () => void handleBackupHistory(),
                                         onRestoreClick: () => historyRestoreInputRef.current?.click(),
                                         inputRef: historyRestoreInputRef,
@@ -685,8 +685,8 @@ export function SettingsPage() {
                                     },
                                     {
                                         key: 'all',
-                                        title: 'Full Project Data',
-                                        description: 'Back up settings, saved barcodes, inventory, transactions, vendors, and vendor profiles together.',
+                                        title: t('settings.backupAll'),
+                                        description: t('settings.backupAllHint'),
                                         onBackup: () => void handleBackupAll(),
                                         onRestoreClick: () => fullRestoreInputRef.current?.click(),
                                         inputRef: fullRestoreInputRef,
@@ -710,7 +710,7 @@ export function SettingsPage() {
                                                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
                                                     >
                                                         <ArrowDownToLine size={13} />
-                                                        {isBackingUp ? 'Backing up...' : 'Backup'}
+                                                        {isBackingUp ? t('settings.backingUp') : t('common.backup')}
                                                     </button>
                                                     <button
                                                         onClick={item.onRestoreClick}
@@ -718,7 +718,7 @@ export function SettingsPage() {
                                                         className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
                                                     >
                                                         <Upload size={13} />
-                                                        {isRestoring ? 'Restoring...' : 'Restore'}
+                                                        {isRestoring ? t('settings.restoring') : t('common.restore')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -758,10 +758,10 @@ export function SettingsPage() {
                                                 try {
                                                     // @ts-ignore
                                                     const result = await window.api?.clearTransactionHistory?.();
-                                                    alert(result?.success ? 'Transaction history cleared.' : (result?.error || 'Failed to clear history.'));
+                                                    alert(result?.success ? t('settings.transactionHistoryCleared') : (result?.error || t('settings.failedToClearHistory')));
                                                 } finally { setIsDeleting(false); setShowDeleteConfirm(false); }
                                             }} disabled={isDeleting} className="rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-800 disabled:opacity-60">
-                                                {isDeleting ? 'Deleting...' : t('settings.confirmDelete')}
+                                                {isDeleting ? t('common.loading') : t('settings.confirmDelete')}
                                             </button>
                                         </>
                                     )}

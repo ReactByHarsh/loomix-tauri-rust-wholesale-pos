@@ -83,3 +83,4 @@ src-tauri/gen/schemas
 ~/.tauri/*.key
 *.key
 !*.key.pub
+IMPORTANT_CREDENTIALS.md

@@ -64,14 +64,37 @@ export const api = {
         return { success: true };
     },
     printBarcode: async (html: string) => {
-        const printWindow = window.open('', '_blank', 'width=420,height=320');
-        if (!printWindow) {
-            return { success: false, error: 'Popup blocked' };
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        iframe.style.opacity = '0';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (!doc) {
+            document.body.removeChild(iframe);
+            return { success: false, error: 'Unable to create print frame' };
         }
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
+
+        doc.open();
+        doc.write(html);
+        doc.close();
+
+        window.setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+        }, 150);
+
+        window.setTimeout(() => {
+            if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+            }
+        }, 1500);
+
         return { success: true };
     },
     getPrinters: async () => {
